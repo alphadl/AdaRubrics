@@ -2,9 +2,18 @@
 
 Supports layered configuration: defaults → file → environment variables.
 All config values are validated via Pydantic settings.
+
+Configs can be loaded from YAML or JSON files::
+
+    config = AdaRubricConfig.from_yaml("config.yaml")
+    config = AdaRubricConfig.from_json("config.json")
 """
 
 from __future__ import annotations
+
+import json
+import os
+from pathlib import Path
 
 from pydantic import BaseModel, Field
 
@@ -65,3 +74,44 @@ class AdaRubricConfig(BaseModel):
     generator: GeneratorConfig = Field(default_factory=GeneratorConfig)
     evaluator: EvaluatorConfig = Field(default_factory=EvaluatorConfig)
     filter: FilterConfig = Field(default_factory=FilterConfig)
+
+    @classmethod
+    def from_json(cls, path: str | Path) -> AdaRubricConfig:
+        """Load config from a JSON file, with env var override for api_key."""
+        text = Path(path).read_text(encoding="utf-8")
+        config = cls.model_validate_json(text)
+        return _apply_env_overrides(config)
+
+    @classmethod
+    def from_yaml(cls, path: str | Path) -> AdaRubricConfig:
+        """Load config from a YAML file (requires ``pyyaml``)."""
+        try:
+            import yaml
+        except ImportError as e:
+            raise ImportError(
+                "pyyaml is required for YAML config. "
+                "Install with: pip install pyyaml"
+            ) from e
+
+        text = Path(path).read_text(encoding="utf-8")
+        data = yaml.safe_load(text)
+        config = cls.model_validate(data)
+        return _apply_env_overrides(config)
+
+    def to_json(self, path: str | Path) -> None:
+        """Save config to a JSON file."""
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps(self.model_dump(), indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+
+def _apply_env_overrides(config: AdaRubricConfig) -> AdaRubricConfig:
+    """Override sensitive fields from environment variables."""
+    if config.llm.api_key is None:
+        env_key = os.environ.get("OPENAI_API_KEY")
+        if env_key:
+            config.llm.api_key = env_key
+    return config
