@@ -21,6 +21,7 @@ class TrajectoryEvaluatorBase(ABC):
         rubric: DynamicRubric,
         *,
         temperature: float = 0.0,
+        task_instruction: str = "",
     ) -> TrajectoryEvaluation:
         """Score a trajectory against the given rubric.
 
@@ -32,6 +33,8 @@ class TrajectoryEvaluatorBase(ABC):
             The task-specific evaluation rubric.
         temperature : float
             LLM sampling temperature for evaluation.
+        task_instruction : str
+            Original task instruction for evaluation context.
 
         Returns
         -------
@@ -45,6 +48,7 @@ class TrajectoryEvaluatorBase(ABC):
         rubric: DynamicRubric,
         *,
         temperature: float = 0.0,
+        task_instruction: str = "",
     ) -> list[TrajectoryEvaluation]:
         """Evaluate multiple trajectories against the same rubric.
 
@@ -53,6 +57,9 @@ class TrajectoryEvaluatorBase(ABC):
         """
         results = []
         for traj in trajectories:
-            result = await self.evaluate(traj, rubric, temperature=temperature)
+            result = await self.evaluate(
+                traj, rubric, temperature=temperature,
+                task_instruction=task_instruction,
+            )
             results.append(result)
         return results

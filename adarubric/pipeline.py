@@ -210,10 +210,12 @@ class AdaRubricPipeline:
         rubric: DynamicRubric,
         *,
         temperature: float = 0.0,
+        task_instruction: str = "",
     ) -> list[TrajectoryEvaluation]:
         """Stage 2 (batch): Evaluate multiple trajectories concurrently."""
         return await self._evaluator.evaluate_batch(
-            trajectories, rubric, temperature=temperature
+            trajectories, rubric, temperature=temperature,
+            task_instruction=task_instruction,
         )
 
     def filter_evaluations(
@@ -255,7 +257,9 @@ class AdaRubricPipeline:
                 "Generated rubric with dimensions: %s", rubric.dimension_names
             )
 
-        all_evals = await self.evaluate_batch(trajectories, rubric)
+        all_evals = await self.evaluate_batch(
+            trajectories, rubric, task_instruction=task.instruction,
+        )
 
         survivors = self.filter_evaluations(all_evals)
 

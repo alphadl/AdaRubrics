@@ -205,11 +205,15 @@ class LLMTrajectoryEvaluator(TrajectoryEvaluatorBase):
         rubric: DynamicRubric,
         *,
         temperature: float = 0.0,
+        task_instruction: str = "",
     ) -> list[TrajectoryEvaluation]:
         """Evaluate multiple trajectories concurrently with bounded parallelism."""
 
         async def _eval_one(traj: Trajectory) -> TrajectoryEvaluation:
             async with self._semaphore:
-                return await self.evaluate(traj, rubric, temperature=temperature)
+                return await self.evaluate(
+                    traj, rubric, temperature=temperature,
+                    task_instruction=task_instruction,
+                )
 
         return list(await asyncio.gather(*[_eval_one(t) for t in trajectories]))
