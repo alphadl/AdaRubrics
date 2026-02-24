@@ -25,6 +25,8 @@ cd AdaRubrics
 pip install -e ".[dev]"
 ```
 
+**Environment:** For the default OpenAI-backed pipeline, set `OPENAI_API_KEY` in your environment (or pass it via config). YAML config support requires `pip install pyyaml`.
+
 ## Quick Start
 
 ```python
@@ -100,6 +102,9 @@ adarubric/
 ├── generator/      # Dynamic rubric generation + prompts
 ├── evaluator/      # Trajectory evaluation + aggregation
 ├── filter/         # Survival-of-the-fittest filtering
+├── analysis/       # Reliability (e.g. Krippendorff's α) and consistency reporting
+├── io/             # Trajectory/evaluation serialization, DPO export
+├── reward/         # Score scalers, step reward assignment, DPO pair generation
 ├── pipeline.py     # End-to-end orchestration
 └── config.py       # Layered configuration
 ```
