@@ -70,6 +70,9 @@ class PipelineResult:
         return sum(e.global_score for e in self.all_evaluations) / len(self.all_evaluations)
 
 
+_AGGREGATION_STRATEGIES = ("weighted_mean", "geometric_mean", "min_score")
+
+
 def _build_aggregator(config: AdaRubricConfig) -> AggregationStrategy:
     strategy = config.evaluator.aggregation_strategy
     if strategy == "weighted_mean":
@@ -78,7 +81,13 @@ def _build_aggregator(config: AdaRubricConfig) -> AggregationStrategy:
         return GeometricMeanAggregator()
     if strategy == "min_score":
         return MinScoreAggregator()
-    raise ConfigurationError(f"Unknown aggregation strategy: {strategy}")
+    raise ConfigurationError(
+        f"Unknown aggregation strategy: {strategy!r}. "
+        f"Valid: {', '.join(_AGGREGATION_STRATEGIES)}"
+    )
+
+
+_FILTER_STRATEGIES = ("absolute", "percentile", "dimension_aware", "composite")
 
 
 def _build_filter(config: AdaRubricConfig) -> TrajectoryFilter:
@@ -100,7 +109,10 @@ def _build_filter(config: AdaRubricConfig) -> TrajectoryFilter:
                 default_threshold=config.filter.default_dimension_threshold,
             ),
         ])
-    raise ConfigurationError(f"Unknown filter strategy: {strategy}")
+    raise ConfigurationError(
+        f"Unknown filter strategy: {strategy!r}. "
+        f"Valid: {', '.join(_FILTER_STRATEGIES)}"
+    )
 
 
 class AdaRubricPipeline:
@@ -251,6 +263,8 @@ class AdaRubricPipeline:
         PipelineResult
             Contains the rubric, all evaluations, and surviving evaluations.
         """
+        if not trajectories:
+            raise ValueError("At least one trajectory is required for evaluation")
         if rubric is None:
             rubric = await self.generate_rubric(task, num_dimensions=num_dimensions)
             logger.info(
@@ -286,5 +300,9 @@ class AdaRubricPipeline:
         trajectories: list[Trajectory],
         **kwargs: Any,
     ) -> PipelineResult:
-        """Synchronous wrapper for :meth:`run`."""
+        """Synchronous wrapper for :meth:`run`.
+
+        Creates a new event loop per call. Prefer :meth:`run` in async code
+        to reuse an existing loop (e.g. multiple tasks in one script).
+        """
         return asyncio.run(self.run(task, trajectories, **kwargs))
