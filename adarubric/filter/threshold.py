@@ -132,6 +132,9 @@ class DimensionAwareFilter(TrajectoryFilter):
         passed: list[TrajectoryEvaluation] = []
 
         for ev in evaluations:
+            if not ev.dimension_global_scores:
+                ev.passed_threshold = False
+                continue
             survives = True
             for dim_name, dim_score in ev.dimension_global_scores.items():
                 threshold = self.dimension_thresholds.get(dim_name, self.default_threshold)

@@ -104,6 +104,17 @@ class TestDimensionAwareFilter:
         passed = f.filter(evals)
         assert len(passed) == 0
 
+    def test_empty_dimension_scores_fail(self):
+        evals = [
+            _make_eval("a", 4.0, dim_scores={}),
+            _make_eval("b", 3.0, dim_scores={"D1": 3.0}),
+        ]
+        f = DimensionAwareFilter(default_threshold=2.5)
+        passed = f.filter(evals)
+        assert len(passed) == 1
+        assert passed[0].trajectory_id == "b"
+        assert evals[0].passed_threshold is False
+
 
 class TestCompositeFilter:
     def test_all_must_pass(self):
