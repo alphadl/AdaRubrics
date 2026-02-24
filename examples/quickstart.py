@@ -71,7 +71,7 @@ async def main() -> None:
 
     result = await pipeline.run(task, [trajectory], num_dimensions=4)
 
-    print(f"=== AdaRubric Evaluation Results ===")
+    print("=== AdaRubric Evaluation Results ===")
     print(f"Task: {task.instruction[:80]}...")
     print(f"Rubric dimensions: {result.rubric.dimension_names}")
     print(f"Global score: {result.mean_score:.2f}/5.0")

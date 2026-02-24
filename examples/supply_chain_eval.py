@@ -20,7 +20,11 @@ from adarubric import (
 )
 from adarubric.evaluator.aggregator import WeightedMeanAggregator
 from adarubric.evaluator.trajectory_evaluator import LLMTrajectoryEvaluator
-from adarubric.filter.threshold import AbsoluteThresholdFilter, CompositeFilter, DimensionAwareFilter
+from adarubric.filter.threshold import (
+    AbsoluteThresholdFilter,
+    CompositeFilter,
+    DimensionAwareFilter,
+)
 from adarubric.generator.llm_generator import LLMRubricGenerator
 from adarubric.llm.openai_client import OpenAIClient
 
@@ -63,7 +67,10 @@ async def main() -> None:
                     "region": "EU",
                     "certification": "ISO 9001",
                 },
-                observation="Found 5 suppliers: SKF (SE), FAG/Schaeffler (DE), NTN-SNR (FR), NSK (UK), ZKL (CZ)",
+                observation=(
+                    "Found 5 suppliers: SKF (SE), FAG/Schaeffler (DE), "
+                    "NTN-SNR (FR), NSK (UK), ZKL (CZ)"
+                ),
             ),
             TrajectoryStep(
                 step_id=1,
