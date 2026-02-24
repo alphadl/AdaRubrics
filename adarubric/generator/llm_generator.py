@@ -82,7 +82,7 @@ class LLMRubricGenerator(RubricGenerator):
                 context={"task_id": task.task_id, "instruction": task.instruction[:200]},
             ) from exc
 
-        self._validate_rubric(rubric, task)
+        rubric = self._validate_rubric(rubric, task)
 
         logger.info(
             "Generated rubric for task %s with %d dimensions: %s",
@@ -93,10 +93,10 @@ class LLMRubricGenerator(RubricGenerator):
         return rubric
 
     @staticmethod
-    def _validate_rubric(rubric: DynamicRubric, task: TaskDescription) -> None:
-        """Post-generation sanity checks beyond Pydantic validation."""
+    def _validate_rubric(rubric: DynamicRubric, task: TaskDescription) -> DynamicRubric:
+        """Post-generation sanity checks; returns rubric with task_id corrected if needed."""
         if rubric.task_id != task.task_id:
-            rubric.task_id = task.task_id
+            rubric = rubric.model_copy(update={"task_id": task.task_id})
 
         names = [d.name for d in rubric.dimensions]
         if len(set(names)) != len(names):
@@ -104,3 +104,4 @@ class LLMRubricGenerator(RubricGenerator):
                 "Generated rubric contains duplicate dimension names",
                 context={"dimension_names": names},
             )
+        return rubric
