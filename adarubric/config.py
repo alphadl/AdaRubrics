@@ -109,9 +109,11 @@ class AdaRubricConfig(BaseModel):
 
 
 def _apply_env_overrides(config: AdaRubricConfig) -> AdaRubricConfig:
-    """Override sensitive fields from environment variables."""
-    if config.llm.api_key is None:
-        env_key = os.environ.get("OPENAI_API_KEY")
-        if env_key:
-            config.llm.api_key = env_key
-    return config
+    """Override sensitive fields from environment variables. Returns a new config."""
+    if config.llm.api_key is not None:
+        return config
+    env_key = os.environ.get("OPENAI_API_KEY")
+    if not env_key:
+        return config
+    updated_llm = config.llm.model_copy(update={"api_key": env_key})
+    return config.model_copy(update={"llm": updated_llm})
