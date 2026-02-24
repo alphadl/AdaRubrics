@@ -86,7 +86,7 @@ class AdaRubricConfig(BaseModel):
     def from_yaml(cls, path: str | Path) -> AdaRubricConfig:
         """Load config from a YAML file (requires ``pyyaml``)."""
         try:
-            import yaml
+            import yaml  # type: ignore[import-untyped]
         except ImportError as e:
             raise ImportError(
                 "pyyaml is required for YAML config. "
