@@ -6,6 +6,7 @@ for complex agentic workflows.
 """
 
 from adarubric.config import AdaRubricConfig
+from adarubric.core.exceptions import ConfigurationError
 from adarubric.core.models import (
     DimensionScore,
     DynamicRubric,
@@ -16,16 +17,18 @@ from adarubric.core.models import (
     TrajectoryEvaluation,
     TrajectoryStep,
 )
-from adarubric.pipeline import AdaRubricPipeline
+from adarubric.pipeline import AdaRubricPipeline, PipelineResult
 
 __version__ = "0.1.0"
 
 __all__ = [
     "AdaRubricConfig",
     "AdaRubricPipeline",
+    "ConfigurationError",
     "DimensionScore",
     "DynamicRubric",
     "EvalDimension",
+    "PipelineResult",
     "StepEvaluation",
     "TaskDescription",
     "Trajectory",
