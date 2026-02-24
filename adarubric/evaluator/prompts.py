@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 EVALUATION_SYSTEM = """\
 You are an expert evaluator of AI agent trajectories.
 
@@ -53,7 +55,7 @@ Evaluate this trajectory against the rubric now.\
 """
 
 
-def format_trajectory_steps(steps: list[dict]) -> str:
+def format_trajectory_steps(steps: list[dict[str, Any]]) -> str:
     """Render trajectory steps as readable text for the LLM prompt."""
     parts: list[str] = []
     for step in steps:

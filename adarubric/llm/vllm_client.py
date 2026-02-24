@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import TypeVar
+from typing import Any, TypeVar, cast
 
 from pydantic import BaseModel, ValidationError
 
@@ -61,9 +61,9 @@ class VLLMClient(LLMClient):
         *,
         temperature: float,
         max_tokens: int,
-        extra_body: dict | None = None,
+        extra_body: dict[str, Any] | None = None,
     ) -> str:
-        kwargs: dict = {
+        kwargs: dict[str, Any] = {
             "model": self.model,
             "messages": messages,
             "temperature": temperature,
@@ -76,7 +76,7 @@ class VLLMClient(LLMClient):
         content = response.choices[0].message.content
         if content is None:
             raise LLMClientError("vLLM returned empty content")
-        return content
+        return cast(str, content)
 
     async def generate_structured(
         self,
@@ -86,7 +86,7 @@ class VLLMClient(LLMClient):
         temperature: float = 0.0,
         max_tokens: int = 4096,
     ) -> T:
-        extra_body: dict | None = None
+        extra_body: dict[str, Any] | None = None
         augmented_messages = list(messages)
         schema = response_model.model_json_schema()
 

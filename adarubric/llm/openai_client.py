@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import TypeVar
+from typing import Any, TypeVar, cast
 
 from pydantic import BaseModel, ValidationError
 from tenacity import (
@@ -107,7 +107,7 @@ class OpenAIClient(LLMClient):
         max_tokens: int,
         json_mode: bool = False,
     ) -> str:
-        kwargs: dict = {
+        kwargs: dict[str, Any] = {
             "model": self.model,
             "messages": messages,
             "temperature": temperature,
@@ -120,7 +120,7 @@ class OpenAIClient(LLMClient):
         content = response.choices[0].message.content
         if content is None:
             raise LLMClientError("LLM returned empty content")
-        return content
+        return cast(str, content)
 
     async def generate_structured(
         self,
