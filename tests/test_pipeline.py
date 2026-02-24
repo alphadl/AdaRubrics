@@ -64,3 +64,17 @@ async def test_pipeline_filtering(
 
     assert len(result.surviving_evaluations) == 0
     assert result.survival_rate == 0.0
+
+
+@pytest.mark.asyncio
+async def test_run_requires_non_empty_trajectories(
+    mock_llm_client: MockLLMClient,
+    sample_task: TaskDescription,
+):
+    pipeline = AdaRubricPipeline(
+        generator=LLMRubricGenerator(mock_llm_client),
+        evaluator=LLMTrajectoryEvaluator(mock_llm_client),
+        filter_=AbsoluteThresholdFilter(min_score=2.0),
+    )
+    with pytest.raises(ValueError, match="At least one trajectory"):
+        await pipeline.run(sample_task, [])

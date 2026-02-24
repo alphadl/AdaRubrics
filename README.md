@@ -29,6 +29,8 @@ pip install -e ".[dev]"
 
 ## Quick Start
 
+Set `OPENAI_API_KEY` (or `config.llm.api_key`) before running.
+
 ```python
 import asyncio
 from adarubric import AdaRubricPipeline, TaskDescription, Trajectory, TrajectoryStep
