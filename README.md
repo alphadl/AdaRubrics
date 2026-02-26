@@ -114,8 +114,8 @@ adarubric/
 ## Related projects
 
 - **[AgentHER](https://github.com/alphadl/AgentHER)** — Hindsight Experience Replay for LLM agents: relabel failed trajectories into valid training data (SFT/DPO). Pairs well with AdaRubric when you want to *recover* low-score or failed runs instead of only filtering.
-- **[AgentSynth](https://github.com/alphadl/AgentSynth)** — Synthetic agent data pipeline (forward + back-translation, execution-based reject sampling). Use AdaRubric to score and filter the synthesized trajectories before training.
-- **[trajectory_tokenization](https://github.com/alphadl/trajectory_tokenization)** — ReAct with trajectory tokenization: compress long (Thought, Action, Observation) history so long-horizon runs fit in context. Addresses context length; AdaRubric addresses *quality* of trajectories.
+- **[AgentSynth](https://github.com/alphadl/AgentSynth)** — Synthetic agent data pipeline (forward + back-translation, execution-based reject sampling). Use it to score and filter the synthesized trajectories before training.
+- **[trajectory_tokenization](https://github.com/alphadl/trajectory_tokenization)** — ReAct with trajectory tokenization: compresses long (Thought, Action, Observation) history so long-horizon runs fit in context. Addresses context length; AdaRubric addresses *quality* of trajectories.
 
 ## Citation
 
