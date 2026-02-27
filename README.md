@@ -3,6 +3,25 @@
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 
+<p align="center">
+  <img src="assets/logo.jpg" width="220" alt="AdaRubric Logo" />
+</p>
+
+<p align="center">
+  <em>Adaptive dynamic rubrics and dense reward signals for agent trajectories</em>
+</p>
+
+<p align="center">
+  <a href="#core-idea">Core Idea</a> •
+  <a href="#installation">Installation</a> •
+  <a href="#quick-start">Quick Start</a> •
+  <a href="#architecture">Architecture</a> •
+  <a href="#related-projects">Related projects</a> •
+  <a href="#citation">Citation</a>
+</p>
+
+---
+
 **Adaptive Dynamic Rubric Evaluator for Agent Trajectories**
 
 A framework that dynamically generates task-specific evaluation dimensions and scores agent trajectories against them, producing dense reward signals for complex agentic workflows.
