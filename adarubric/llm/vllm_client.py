@@ -22,6 +22,35 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T", bound=BaseModel)
 
 
+def _extract_json(text: str) -> str:
+    """Extract the first JSON object or array from ``text``.
+
+    Handles common LLM output patterns where JSON is wrapped in markdown
+    code fences or surrounded by conversational text.
+    """
+    for fence in ("```json", "```"):
+        if fence in text:
+            start = text.index(fence) + len(fence)
+            end = text.index("```", start) if "```" in text[start:] else len(text)
+            text = text[start:end].strip()
+            break
+
+    for open_char, close_char in [("{", "}"), ("[", "]")]:
+        first = text.find(open_char)
+        if first == -1:
+            continue
+        depth = 0
+        for i in range(first, len(text)):
+            if text[i] == open_char:
+                depth += 1
+            elif text[i] == close_char:
+                depth -= 1
+            if depth == 0:
+                return text[first : i + 1]
+
+    return text
+
+
 class VLLMClient(LLMClient):
     """Client for self-hosted vLLM inference servers.
 
@@ -94,24 +123,32 @@ class VLLMClient(LLMClient):
             extra_body = {"guided_json": json.dumps(schema)}
         else:
             json_instruction = (
-                f"\n\nRespond with valid JSON matching this schema:\n"
-                f"{json.dumps(schema, indent=2)}"
+                f"\n\nRespond with valid JSON matching this schema:\n{json.dumps(schema, indent=2)}"
             )
             if augmented_messages and augmented_messages[-1]["role"] == "user":
                 augmented_messages[-1] = {
                     **augmented_messages[-1],
                     "content": augmented_messages[-1]["content"] + json_instruction,
                 }
-
-        raw = await self._chat(
-            augmented_messages,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            extra_body=extra_body,
-        )
+            else:
+                augmented_messages.append({"role": "user", "content": json_instruction})
 
         try:
-            return response_model.model_validate_json(raw)
+            raw = await self._chat(
+                augmented_messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                extra_body=extra_body,
+            )
+        except Exception as exc:
+            raise LLMClientError(
+                f"vLLM API error: {exc}",
+                context={"model": self.model},
+            ) from exc
+
+        extracted = _extract_json(raw) if not self.use_guided_decoding else raw
+        try:
+            return response_model.model_validate_json(extracted)
         except (ValidationError, json.JSONDecodeError) as exc:
             logger.warning("Failed to parse vLLM response:\n%s", raw[:500])
             raise LLMClientError(
@@ -126,9 +163,7 @@ class VLLMClient(LLMClient):
         temperature: float = 0.0,
         max_tokens: int = 4096,
     ) -> str:
-        return await self._chat(
-            messages, temperature=temperature, max_tokens=max_tokens
-        )
+        return await self._chat(messages, temperature=temperature, max_tokens=max_tokens)
 
     async def close(self) -> None:
         await self._client.close()

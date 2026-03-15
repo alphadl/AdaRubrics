@@ -58,7 +58,9 @@ class TrajectoryEvaluatorBase(ABC):
         results = []
         for traj in trajectories:
             result = await self.evaluate(
-                traj, rubric, temperature=temperature,
+                traj,
+                rubric,
+                temperature=temperature,
                 task_instruction=task_instruction,
             )
             results.append(result)

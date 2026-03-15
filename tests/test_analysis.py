@@ -10,11 +10,13 @@ from adarubric.analysis.reliability import krippendorffs_alpha
 
 class TestKrippendorffsAlpha:
     def test_perfect_agreement(self):
-        ratings = np.array([
-            [3.0, 4.0, 5.0],
-            [3.0, 4.0, 5.0],
-            [3.0, 4.0, 5.0],
-        ])
+        ratings = np.array(
+            [
+                [3.0, 4.0, 5.0],
+                [3.0, 4.0, 5.0],
+                [3.0, 4.0, 5.0],
+            ]
+        )
         alpha = krippendorffs_alpha(ratings)
         assert alpha == pytest.approx(1.0, abs=0.01)
 
@@ -25,11 +27,13 @@ class TestKrippendorffsAlpha:
         assert alpha < 0.3
 
     def test_partial_agreement(self):
-        ratings = np.array([
-            [1.0, 2.0, 3.0, 4.0, 5.0],
-            [1.0, 2.0, 3.0, 4.0, 5.0],
-            [1.5, 2.5, 3.5, 3.5, 4.5],
-        ])
+        ratings = np.array(
+            [
+                [1.0, 2.0, 3.0, 4.0, 5.0],
+                [1.0, 2.0, 3.0, 4.0, 5.0],
+                [1.5, 2.5, 3.5, 3.5, 4.5],
+            ]
+        )
         alpha = krippendorffs_alpha(ratings)
         assert 0.5 < alpha < 1.0
 
@@ -44,11 +48,13 @@ class TestKrippendorffsAlpha:
         assert np.isnan(alpha)
 
     def test_with_missing_values(self):
-        ratings = np.array([
-            [1.0, np.nan, 3.0, 4.0],
-            [1.0, 2.0, 3.0, 4.0],
-            [1.0, 2.0, np.nan, 4.0],
-        ])
+        ratings = np.array(
+            [
+                [1.0, np.nan, 3.0, 4.0],
+                [1.0, 2.0, 3.0, 4.0],
+                [1.0, 2.0, np.nan, 4.0],
+            ]
+        )
         alpha = krippendorffs_alpha(ratings)
         assert not np.isnan(alpha)
 
@@ -58,19 +64,25 @@ class TestConsistencyReport:
         from adarubric.analysis.reliability import ConsistencyReport
 
         reliable = ConsistencyReport(
-            n_runs=5, trajectory_id="t1", global_alpha=0.85,
+            n_runs=5,
+            trajectory_id="t1",
+            global_alpha=0.85,
         )
         assert reliable.is_reliable
         assert not reliable.is_tentative
 
         tentative = ConsistencyReport(
-            n_runs=5, trajectory_id="t1", global_alpha=0.72,
+            n_runs=5,
+            trajectory_id="t1",
+            global_alpha=0.72,
         )
         assert not tentative.is_reliable
         assert tentative.is_tentative
 
         unreliable = ConsistencyReport(
-            n_runs=5, trajectory_id="t1", global_alpha=0.50,
+            n_runs=5,
+            trajectory_id="t1",
+            global_alpha=0.50,
         )
         assert not unreliable.is_reliable
         assert not unreliable.is_tentative

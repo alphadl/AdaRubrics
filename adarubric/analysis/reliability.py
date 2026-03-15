@@ -15,6 +15,7 @@ Krippendorff's alpha interpretation (interval data):
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from dataclasses import dataclass, field
 
@@ -81,13 +82,16 @@ def krippendorffs_alpha(
 
     if level_of_measurement == "interval":
         grand_var = np.var(all_valid, ddof=0)
-        d_exp = grand_var if grand_var > 0 else 1e-10
+        # D_e = 2*N/(N-1) * Var  (mean squared diff over all ordered pairs)
+        d_exp = 2 * n_total / (n_total - 1) * grand_var if grand_var > 0 else 1e-10
     else:
-        d_exp = np.mean([
-            abs(all_valid[i] - all_valid[j])
-            for i in range(n_total)
-            for j in range(i + 1, n_total)
-        ])
+        d_exp = np.mean(
+            [
+                abs(all_valid[i] - all_valid[j])
+                for i in range(n_total)
+                for j in range(i + 1, n_total)
+            ]
+        )
         d_exp = d_exp if d_exp > 0 else 1e-10
 
     alpha = 1.0 - d_obs / d_exp
@@ -166,14 +170,19 @@ async def evaluate_consistency(
     if n_runs < 2:
         raise ValueError("n_runs must be >= 2 for reliability estimation")
 
-    evaluations: list[TrajectoryEvaluation] = []
-    for _ in range(n_runs):
-        ev = await evaluator.evaluate(
-            trajectory, rubric,
-            temperature=temperature,
-            task_instruction=task_instruction,
+    evaluations: list[TrajectoryEvaluation] = list(
+        await asyncio.gather(
+            *[
+                evaluator.evaluate(
+                    trajectory,
+                    rubric,
+                    temperature=temperature,
+                    task_instruction=task_instruction,
+                )
+                for _ in range(n_runs)
+            ]
         )
-        evaluations.append(ev)
+    )
 
     dim_names = rubric.dimension_names
     global_scores = np.array([ev.global_score for ev in evaluations])
@@ -200,10 +209,9 @@ async def evaluate_consistency(
             dimension_alphas[dim_name] = float("nan")
 
     # Global alpha across all dimensions (n_runs x n_dims matrix)
-    all_dim_matrix = np.array([
-        [ev.dimension_global_scores.get(d, float("nan")) for d in dim_names]
-        for ev in evaluations
-    ])
+    all_dim_matrix = np.array(
+        [[ev.dimension_global_scores.get(d, float("nan")) for d in dim_names] for ev in evaluations]
+    )
     global_alpha = krippendorffs_alpha(all_dim_matrix)
 
     report = ConsistencyReport(
@@ -219,7 +227,9 @@ async def evaluate_consistency(
 
     logger.info(
         "Consistency analysis for %s: alpha=%.3f over %d runs",
-        trajectory.trajectory_id, global_alpha, n_runs,
+        trajectory.trajectory_id,
+        global_alpha,
+        n_runs,
     )
 
     return report

@@ -123,10 +123,12 @@ class TestCompositeFilter:
             _make_eval("b", 3.5, dim_scores={"D1": 3.0}),
             _make_eval("c", 2.0, dim_scores={"D1": 4.0}),
         ]
-        f = CompositeFilter([
-            AbsoluteThresholdFilter(min_score=3.0),
-            DimensionAwareFilter(default_threshold=2.5),
-        ])
+        f = CompositeFilter(
+            [
+                AbsoluteThresholdFilter(min_score=3.0),
+                DimensionAwareFilter(default_threshold=2.5),
+            ]
+        )
         passed = f.filter(evals)
         assert len(passed) == 1
         assert passed[0].trajectory_id == "b"

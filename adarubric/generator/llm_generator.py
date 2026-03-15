@@ -37,9 +37,7 @@ class LLMRubricGenerator(RubricGenerator):
         self._client = client
         self._include_few_shot = include_few_shot
 
-    def _build_messages(
-        self, task: TaskDescription, num_dimensions: int
-    ) -> list[dict[str, str]]:
+    def _build_messages(self, task: TaskDescription, num_dimensions: int) -> list[dict[str, str]]:
         system_content = RUBRIC_GENERATION_SYSTEM.format(num_dimensions=num_dimensions)
         if self._include_few_shot:
             system_content += "\n\n" + RUBRIC_GENERATION_FEW_SHOT

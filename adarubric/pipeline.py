@@ -82,8 +82,7 @@ def _build_aggregator(config: AdaRubricConfig) -> AggregationStrategy:
     if strategy == "min_score":
         return MinScoreAggregator()
     raise ConfigurationError(
-        f"Unknown aggregation strategy: {strategy!r}. "
-        f"Valid: {', '.join(_AGGREGATION_STRATEGIES)}"
+        f"Unknown aggregation strategy: {strategy!r}. Valid: {', '.join(_AGGREGATION_STRATEGIES)}"
     )
 
 
@@ -102,16 +101,17 @@ def _build_filter(config: AdaRubricConfig) -> TrajectoryFilter:
             default_threshold=config.filter.default_dimension_threshold,
         )
     if strategy == "composite":
-        return CompositeFilter([
-            AbsoluteThresholdFilter(min_score=config.filter.min_score),
-            DimensionAwareFilter(
-                dimension_thresholds=config.filter.dimension_thresholds,
-                default_threshold=config.filter.default_dimension_threshold,
-            ),
-        ])
+        return CompositeFilter(
+            [
+                AbsoluteThresholdFilter(min_score=config.filter.min_score),
+                DimensionAwareFilter(
+                    dimension_thresholds=config.filter.dimension_thresholds,
+                    default_threshold=config.filter.default_dimension_threshold,
+                ),
+            ]
+        )
     raise ConfigurationError(
-        f"Unknown filter strategy: {strategy!r}. "
-        f"Valid: {', '.join(_FILTER_STRATEGIES)}"
+        f"Unknown filter strategy: {strategy!r}. Valid: {', '.join(_FILTER_STRATEGIES)}"
     )
 
 
@@ -212,9 +212,7 @@ class AdaRubricPipeline:
         temperature: float = 0.0,
     ) -> TrajectoryEvaluation:
         """Stage 2: Evaluate a single trajectory against a rubric."""
-        return await self._evaluator.evaluate(
-            trajectory, rubric, temperature=temperature
-        )
+        return await self._evaluator.evaluate(trajectory, rubric, temperature=temperature)
 
     async def evaluate_batch(
         self,
@@ -226,7 +224,9 @@ class AdaRubricPipeline:
     ) -> list[TrajectoryEvaluation]:
         """Stage 2 (batch): Evaluate multiple trajectories concurrently."""
         return await self._evaluator.evaluate_batch(
-            trajectories, rubric, temperature=temperature,
+            trajectories,
+            rubric,
+            temperature=temperature,
             task_instruction=task_instruction,
         )
 
@@ -267,12 +267,12 @@ class AdaRubricPipeline:
             raise ValueError("At least one trajectory is required for evaluation")
         if rubric is None:
             rubric = await self.generate_rubric(task, num_dimensions=num_dimensions)
-            logger.info(
-                "Generated rubric with dimensions: %s", rubric.dimension_names
-            )
+            logger.info("Generated rubric with dimensions: %s", rubric.dimension_names)
 
         all_evals = await self.evaluate_batch(
-            trajectories, rubric, task_instruction=task.instruction,
+            trajectories,
+            rubric,
+            task_instruction=task.instruction,
         )
 
         survivors = self.filter_evaluations(all_evals)

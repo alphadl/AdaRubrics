@@ -27,6 +27,9 @@ jobs:
       - name: Lint with ruff
         run: ruff check adarubric/ tests/
 
+      - name: Format check with ruff
+        run: ruff format --check adarubric/ tests/
+
       - name: Run tests
         run: pytest tests/ -v --tb=short --cov=adarubric --cov-report=term-missing
 

@@ -106,7 +106,8 @@ class LLMTrajectoryEvaluator(TrajectoryEvaluatorBase):
                 "step_id": s.step_id,
                 "thought": s.thought,
                 "action": s.action,
-                "action_input": s.action_input if isinstance(s.action_input, str)
+                "action_input": s.action_input
+                if isinstance(s.action_input, str)
                 else json.dumps(s.action_input),
                 "observation": s.observation,
             }
@@ -133,6 +134,19 @@ class LLMTrajectoryEvaluator(TrajectoryEvaluatorBase):
         """Convert parsed LLM output into the canonical evaluation model."""
         step_evals: list[StepEvaluation] = []
         for raw_step in raw.step_evaluations:
+            valid_dims = rubric.dimension_names
+            dropped = [
+                ds.dimension_name
+                for ds in raw_step.dimension_scores
+                if ds.dimension_name not in valid_dims
+            ]
+            if dropped:
+                logger.warning(
+                    "Step %d: ignoring %d unrecognised dimension(s): %s",
+                    raw_step.step_id,
+                    len(dropped),
+                    dropped,
+                )
             dim_scores = [
                 DimensionScore(
                     dimension_name=ds.dimension_name,
@@ -141,7 +155,7 @@ class LLMTrajectoryEvaluator(TrajectoryEvaluatorBase):
                     rationale=ds.rationale,
                 )
                 for ds in raw_step.dimension_scores
-                if ds.dimension_name in rubric.dimension_names
+                if ds.dimension_name in valid_dims
             ]
             step_evals.append(
                 StepEvaluation(
@@ -212,7 +226,9 @@ class LLMTrajectoryEvaluator(TrajectoryEvaluatorBase):
         async def _eval_one(traj: Trajectory) -> TrajectoryEvaluation:
             async with self._semaphore:
                 return await self.evaluate(
-                    traj, rubric, temperature=temperature,
+                    traj,
+                    rubric,
+                    temperature=temperature,
                     task_instruction=task_instruction,
                 )
 

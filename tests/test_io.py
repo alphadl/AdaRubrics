@@ -98,8 +98,11 @@ class TestDPOExport:
         dataset = DPODataset(
             pairs=[
                 DPOPair(
-                    chosen_id="a", rejected_id="b",
-                    chosen_score=4.0, rejected_score=2.0, margin=2.0,
+                    chosen_id="a",
+                    rejected_id="b",
+                    chosen_score=4.0,
+                    rejected_score=2.0,
+                    margin=2.0,
                 ),
             ],
             task_id="t1",

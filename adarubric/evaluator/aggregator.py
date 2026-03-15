@@ -70,9 +70,7 @@ class WeightedMeanAggregator(AggregationStrategy):
             return {}, 0.0
 
         step_weights = self._step_weights(len(step_evaluations))
-        dim_scores: dict[str, list[tuple[float, float]]] = {
-            d.name: [] for d in rubric.dimensions
-        }
+        dim_scores: dict[str, list[tuple[float, float]]] = {d.name: [] for d in rubric.dimensions}
 
         for step_eval, sw in zip(step_evaluations, step_weights, strict=True):
             for ds in step_eval.dimension_scores:
@@ -92,10 +90,10 @@ class WeightedMeanAggregator(AggregationStrategy):
         if total_rubric_weight == 0:
             return dimension_globals, 0.0
 
-        overall = sum(
-            dimension_globals.get(d.name, 0.0) * d.weight
-            for d in rubric.dimensions
-        ) / total_rubric_weight
+        overall = (
+            sum(dimension_globals.get(d.name, 0.0) * d.weight for d in rubric.dimensions)
+            / total_rubric_weight
+        )
 
         return dimension_globals, round(overall, 4)
 

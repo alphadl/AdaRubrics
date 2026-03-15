@@ -166,9 +166,7 @@ class StepRewardAssigner:
 
         return rewards
 
-    def assign_batch(
-        self, evaluations: list[TrajectoryEvaluation]
-    ) -> list[list[float]]:
+    def assign_batch(self, evaluations: list[TrajectoryEvaluation]) -> list[list[float]]:
         return [self.assign(ev) for ev in evaluations]
 
 
@@ -235,18 +233,14 @@ class DPOPairGenerator:
         self.min_margin = min_margin
         self.max_pairs_per_chosen = max_pairs_per_chosen
 
-    def generate(
-        self, evaluations: list[TrajectoryEvaluation]
-    ) -> DPODataset:
+    def generate(self, evaluations: list[TrajectoryEvaluation]) -> DPODataset:
         """Generate DPO pairs from a batch of evaluations.
 
         Trajectories are compared pairwise. The higher-scoring one becomes
         "chosen" and the lower-scoring one becomes "rejected", provided the
         gap exceeds ``min_margin``.
         """
-        sorted_evals = sorted(
-            evaluations, key=lambda e: e.global_score, reverse=True
-        )
+        sorted_evals = sorted(evaluations, key=lambda e: e.global_score, reverse=True)
 
         pairs: list[DPOPair] = []
         chosen_counts: dict[str, int] = {}
@@ -255,8 +249,7 @@ class DPOPairGenerator:
         for i, chosen in enumerate(sorted_evals):
             if (
                 self.max_pairs_per_chosen is not None
-                and chosen_counts.get(chosen.trajectory_id, 0)
-                >= self.max_pairs_per_chosen
+                and chosen_counts.get(chosen.trajectory_id, 0) >= self.max_pairs_per_chosen
             ):
                 continue
 
@@ -274,22 +267,27 @@ class DPOPairGenerator:
                         margin=gap,
                     )
                 )
-                chosen_counts[chosen.trajectory_id] = (
-                    chosen_counts.get(chosen.trajectory_id, 0) + 1
-                )
+                chosen_counts[chosen.trajectory_id] = chosen_counts.get(chosen.trajectory_id, 0) + 1
 
                 if (
                     self.max_pairs_per_chosen is not None
-                    and chosen_counts[chosen.trajectory_id]
-                    >= self.max_pairs_per_chosen
+                    and chosen_counts[chosen.trajectory_id] >= self.max_pairs_per_chosen
                 ):
                     break
 
-        logger.info(
-            "Generated %d DPO pairs from %d evaluations (min_margin=%.2f)",
-            len(pairs),
-            len(evaluations),
-            self.min_margin,
-        )
+        if pairs:
+            logger.info(
+                "Generated %d DPO pairs from %d evaluations (min_margin=%.2f)",
+                len(pairs),
+                len(evaluations),
+                self.min_margin,
+            )
+        else:
+            logger.warning(
+                "No DPO pairs generated from %d evaluations (min_margin=%.2f) — "
+                "consider lowering min_margin or providing more diverse trajectories",
+                len(evaluations),
+                self.min_margin,
+            )
 
         return DPODataset(pairs=pairs, task_id=task_id)

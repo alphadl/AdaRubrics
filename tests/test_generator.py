@@ -48,9 +48,7 @@ async def test_few_shot_included_in_prompt(
 
 
 @pytest.mark.asyncio
-async def test_few_shot_excluded(
-    mock_llm_client: MockLLMClient, sample_task: TaskDescription
-):
+async def test_few_shot_excluded(mock_llm_client: MockLLMClient, sample_task: TaskDescription):
     generator = LLMRubricGenerator(mock_llm_client, include_few_shot=False)
     await generator.generate(sample_task)
     system_msg = mock_llm_client.last_messages[0]["content"]

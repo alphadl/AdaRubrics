@@ -36,9 +36,7 @@ class AbsoluteThresholdFilter(TrajectoryFilter):
             raise ValueError(f"min_score must be in [0, 5], got {min_score}")
         self.min_score = min_score
 
-    def filter(
-        self, evaluations: list[TrajectoryEvaluation]
-    ) -> list[TrajectoryEvaluation]:
+    def filter(self, evaluations: list[TrajectoryEvaluation]) -> list[TrajectoryEvaluation]:
         passed: list[TrajectoryEvaluation] = []
         for ev in evaluations:
             survives = ev.global_score >= self.min_score
@@ -72,9 +70,7 @@ class PercentileFilter(TrajectoryFilter):
         self.percentile = percentile
         self.min_survivors = max(min_survivors, 0)
 
-    def filter(
-        self, evaluations: list[TrajectoryEvaluation]
-    ) -> list[TrajectoryEvaluation]:
+    def filter(self, evaluations: list[TrajectoryEvaluation]) -> list[TrajectoryEvaluation]:
         if not evaluations:
             return []
 
@@ -126,13 +122,15 @@ class DimensionAwareFilter(TrajectoryFilter):
         self.dimension_thresholds = dimension_thresholds or {}
         self.default_threshold = default_threshold
 
-    def filter(
-        self, evaluations: list[TrajectoryEvaluation]
-    ) -> list[TrajectoryEvaluation]:
+    def filter(self, evaluations: list[TrajectoryEvaluation]) -> list[TrajectoryEvaluation]:
         passed: list[TrajectoryEvaluation] = []
 
         for ev in evaluations:
             if not ev.dimension_global_scores:
+                logger.warning(
+                    "Trajectory %s rejected: no dimension scores available",
+                    ev.trajectory_id,
+                )
                 ev.passed_threshold = False
                 continue
             survives = True
@@ -145,9 +143,7 @@ class DimensionAwareFilter(TrajectoryFilter):
             if survives:
                 passed.append(ev)
 
-        logger.info(
-            "DimensionAwareFilter: %d/%d passed", len(passed), len(evaluations)
-        )
+        logger.info("DimensionAwareFilter: %d/%d passed", len(passed), len(evaluations))
         return passed
 
 
@@ -168,9 +164,7 @@ class CompositeFilter(TrajectoryFilter):
             raise ValueError("CompositeFilter requires at least one filter")
         self._filters = list(filters)
 
-    def filter(
-        self, evaluations: list[TrajectoryEvaluation]
-    ) -> list[TrajectoryEvaluation]:
+    def filter(self, evaluations: list[TrajectoryEvaluation]) -> list[TrajectoryEvaluation]:
         current = evaluations
         for f in self._filters:
             current = f.filter(current)

@@ -89,8 +89,7 @@ class AdaRubricConfig(BaseModel):
             import yaml  # type: ignore[import-untyped]
         except ImportError as e:
             raise ImportError(
-                "pyyaml is required for YAML config. "
-                "Install with: pip install pyyaml"
+                "pyyaml is required for YAML config. Install with: pip install pyyaml"
             ) from e
 
         text = Path(path).read_text(encoding="utf-8")

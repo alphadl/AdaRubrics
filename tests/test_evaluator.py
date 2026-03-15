@@ -46,9 +46,11 @@ def _make_steps(scores_per_step: list[list[tuple[str, int, float]]]) -> list[Ste
 class TestWeightedMeanAggregator:
     def test_uniform_weights(self):
         rubric = _make_rubric([1.0, 1.0])
-        steps = _make_steps([
-            [("Dim0", 4, 1.0), ("Dim1", 2, 1.0)],
-        ])
+        steps = _make_steps(
+            [
+                [("Dim0", 4, 1.0), ("Dim1", 2, 1.0)],
+            ]
+        )
         agg = WeightedMeanAggregator()
         dim_globals, overall = agg.aggregate_steps(steps, rubric)
         assert dim_globals["Dim0"] == 4.0
@@ -57,19 +59,23 @@ class TestWeightedMeanAggregator:
 
     def test_non_uniform_weights(self):
         rubric = _make_rubric([2.0, 1.0])
-        steps = _make_steps([
-            [("Dim0", 5, 1.0), ("Dim1", 2, 1.0)],
-        ])
+        steps = _make_steps(
+            [
+                [("Dim0", 5, 1.0), ("Dim1", 2, 1.0)],
+            ]
+        )
         agg = WeightedMeanAggregator()
         _, overall = agg.aggregate_steps(steps, rubric)
         assert overall == pytest.approx(4.0, abs=0.01)
 
     def test_multi_step_averaging(self):
         rubric = _make_rubric([1.0])
-        steps = _make_steps([
-            [("Dim0", 2, 1.0)],
-            [("Dim0", 4, 1.0)],
-        ])
+        steps = _make_steps(
+            [
+                [("Dim0", 2, 1.0)],
+                [("Dim0", 4, 1.0)],
+            ]
+        )
         agg = WeightedMeanAggregator()
         dim_globals, overall = agg.aggregate_steps(steps, rubric)
         assert dim_globals["Dim0"] == 3.0
@@ -77,19 +83,23 @@ class TestWeightedMeanAggregator:
 
     def test_recency_decay(self):
         rubric = _make_rubric([1.0])
-        steps = _make_steps([
-            [("Dim0", 2, 1.0)],
-            [("Dim0", 4, 1.0)],
-        ])
+        steps = _make_steps(
+            [
+                [("Dim0", 2, 1.0)],
+                [("Dim0", 4, 1.0)],
+            ]
+        )
         agg = WeightedMeanAggregator(recency_decay=2.0)
         dim_globals, _ = agg.aggregate_steps(steps, rubric)
         assert dim_globals["Dim0"] > 3.0
 
     def test_confidence_weighting(self):
         rubric = _make_rubric([1.0])
-        steps = _make_steps([
-            [("Dim0", 4, 0.5)],
-        ])
+        steps = _make_steps(
+            [
+                [("Dim0", 4, 0.5)],
+            ]
+        )
         agg = WeightedMeanAggregator()
         dim_globals, _ = agg.aggregate_steps(steps, rubric)
         assert dim_globals["Dim0"] == 2.0
@@ -105,18 +115,22 @@ class TestWeightedMeanAggregator:
 class TestGeometricMeanAggregator:
     def test_equal_scores(self):
         rubric = _make_rubric([1.0, 1.0])
-        steps = _make_steps([
-            [("Dim0", 3, 1.0), ("Dim1", 3, 1.0)],
-        ])
+        steps = _make_steps(
+            [
+                [("Dim0", 3, 1.0), ("Dim1", 3, 1.0)],
+            ]
+        )
         agg = GeometricMeanAggregator()
         _, overall = agg.aggregate_steps(steps, rubric)
         assert overall == pytest.approx(3.0, abs=0.01)
 
     def test_penalizes_low_outlier(self):
         rubric = _make_rubric([1.0, 1.0])
-        steps = _make_steps([
-            [("Dim0", 5, 1.0), ("Dim1", 1, 1.0)],
-        ])
+        steps = _make_steps(
+            [
+                [("Dim0", 5, 1.0), ("Dim1", 1, 1.0)],
+            ]
+        )
         agg_geo = GeometricMeanAggregator()
         agg_arith = WeightedMeanAggregator()
         _, geo = agg_geo.aggregate_steps(steps, rubric)
@@ -127,18 +141,22 @@ class TestGeometricMeanAggregator:
 class TestMinScoreAggregator:
     def test_takes_minimum(self):
         rubric = _make_rubric([1.0, 1.0])
-        steps = _make_steps([
-            [("Dim0", 5, 1.0), ("Dim1", 2, 1.0)],
-        ])
+        steps = _make_steps(
+            [
+                [("Dim0", 5, 1.0), ("Dim1", 2, 1.0)],
+            ]
+        )
         agg = MinScoreAggregator()
         _, overall = agg.aggregate_steps(steps, rubric)
         assert overall == 2.0
 
     def test_all_same(self):
         rubric = _make_rubric([1.0, 1.0])
-        steps = _make_steps([
-            [("Dim0", 3, 1.0), ("Dim1", 3, 1.0)],
-        ])
+        steps = _make_steps(
+            [
+                [("Dim0", 3, 1.0), ("Dim1", 3, 1.0)],
+            ]
+        )
         agg = MinScoreAggregator()
         _, overall = agg.aggregate_steps(steps, rubric)
         assert overall == 3.0

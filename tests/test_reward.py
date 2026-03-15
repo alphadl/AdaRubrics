@@ -39,9 +39,7 @@ def _make_eval(tid: str, score: float) -> TrajectoryEvaluation:
     )
 
 
-def _make_eval_with_steps(
-    tid: str, step_scores: list[float]
-) -> TrajectoryEvaluation:
+def _make_eval_with_steps(tid: str, step_scores: list[float]) -> TrajectoryEvaluation:
     rubric = DynamicRubric(
         task_id="t1",
         dimensions=[
@@ -57,7 +55,8 @@ def _make_eval_with_steps(
             step_id=i,
             dimension_scores=[
                 DimensionScore(
-                    dimension_name="D1", score=max(1, min(5, int(s))),
+                    dimension_name="D1",
+                    score=max(1, min(5, int(s))),
                 )
             ],
         )

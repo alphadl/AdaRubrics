@@ -127,8 +127,7 @@ def sample_rubric() -> DynamicRubric:
             EvalDimension(
                 name="ComparativeReasoning",
                 description=(
-                    "Whether the agent systematically compares options "
-                    "using consistent criteria"
+                    "Whether the agent systematically compares options using consistent criteria"
                 ),
                 weight=1.0,
                 scoring_criteria={
@@ -156,8 +155,7 @@ def sample_rubric() -> DynamicRubric:
             ),
         ],
         generation_rationale=(
-            "Dimensions cover the four key phases: "
-            "search, extraction, comparison, recommendation."
+            "Dimensions cover the four key phases: search, extraction, comparison, recommendation."
         ),
     )
 
@@ -216,11 +214,15 @@ def sample_evaluation(sample_rubric: DynamicRubric) -> TrajectoryEvaluation:
                 dimension_scores=[
                     DimensionScore(
                         dimension_name="SearchStrategyQuality",
-                        score=4, confidence=0.9, rationale="Good query",
+                        score=4,
+                        confidence=0.9,
+                        rationale="Good query",
                     ),
                     DimensionScore(
                         dimension_name="DataExtractionAccuracy",
-                        score=3, confidence=0.7, rationale="Basic extraction",
+                        score=3,
+                        confidence=0.7,
+                        rationale="Basic extraction",
                     ),
                 ],
                 step_quality_summary="Adequate search step",
@@ -230,11 +232,15 @@ def sample_evaluation(sample_rubric: DynamicRubric) -> TrajectoryEvaluation:
                 dimension_scores=[
                     DimensionScore(
                         dimension_name="DataExtractionAccuracy",
-                        score=4, confidence=0.9, rationale="Correct prices",
+                        score=4,
+                        confidence=0.9,
+                        rationale="Correct prices",
                     ),
                     DimensionScore(
                         dimension_name="ComparativeReasoning",
-                        score=3, confidence=0.8, rationale="Simple comparison",
+                        score=3,
+                        confidence=0.8,
+                        rationale="Simple comparison",
                     ),
                 ],
                 step_quality_summary="Good data collection",
@@ -244,11 +250,15 @@ def sample_evaluation(sample_rubric: DynamicRubric) -> TrajectoryEvaluation:
                 dimension_scores=[
                     DimensionScore(
                         dimension_name="ComparativeReasoning",
-                        score=3, confidence=0.8, rationale="Basic logic",
+                        score=3,
+                        confidence=0.8,
+                        rationale="Basic logic",
                     ),
                     DimensionScore(
                         dimension_name="RecommendationJustification",
-                        score=4, confidence=0.9, rationale="Clear reasoning",
+                        score=4,
+                        confidence=0.9,
+                        rationale="Clear reasoning",
                     ),
                 ],
                 step_quality_summary="Reasonable recommendation",
@@ -278,35 +288,70 @@ def mock_rubric_response(sample_rubric: DynamicRubric) -> str:
 @pytest.fixture
 def mock_llm_client(mock_rubric_response: str) -> MockLLMClient:
     step0_scores = [
-        {"dimension_name": "SearchStrategyQuality", "score": 4,
-         "confidence": 0.9, "rationale": "Good search query"},
-        {"dimension_name": "DataExtractionAccuracy", "score": 3,
-         "confidence": 0.7, "rationale": "Basic extraction"},
+        {
+            "dimension_name": "SearchStrategyQuality",
+            "score": 4,
+            "confidence": 0.9,
+            "rationale": "Good search query",
+        },
+        {
+            "dimension_name": "DataExtractionAccuracy",
+            "score": 3,
+            "confidence": 0.7,
+            "rationale": "Basic extraction",
+        },
     ]
     step1_scores = [
-        {"dimension_name": "DataExtractionAccuracy", "score": 4,
-         "confidence": 0.9, "rationale": "Prices correct"},
-        {"dimension_name": "ComparativeReasoning", "score": 3,
-         "confidence": 0.8, "rationale": "Simple comparison"},
+        {
+            "dimension_name": "DataExtractionAccuracy",
+            "score": 4,
+            "confidence": 0.9,
+            "rationale": "Prices correct",
+        },
+        {
+            "dimension_name": "ComparativeReasoning",
+            "score": 3,
+            "confidence": 0.8,
+            "rationale": "Simple comparison",
+        },
     ]
     step2_scores = [
-        {"dimension_name": "ComparativeReasoning", "score": 3,
-         "confidence": 0.8, "rationale": "OK"},
-        {"dimension_name": "RecommendationJustification", "score": 4,
-         "confidence": 0.9, "rationale": "Clear"},
+        {
+            "dimension_name": "ComparativeReasoning",
+            "score": 3,
+            "confidence": 0.8,
+            "rationale": "OK",
+        },
+        {
+            "dimension_name": "RecommendationJustification",
+            "score": 4,
+            "confidence": 0.9,
+            "rationale": "Clear",
+        },
     ]
-    eval_response = json.dumps({
-        "trajectory_id": "traj-001",
-        "task_id": "test-task-001",
-        "step_evaluations": [
-            {"step_id": 0, "dimension_scores": step0_scores,
-             "step_quality_summary": "Adequate search"},
-            {"step_id": 1, "dimension_scores": step1_scores,
-             "step_quality_summary": "Data collected"},
-            {"step_id": 2, "dimension_scores": step2_scores,
-             "step_quality_summary": "Good recommendation"},
-        ],
-    })
+    eval_response = json.dumps(
+        {
+            "trajectory_id": "traj-001",
+            "task_id": "test-task-001",
+            "step_evaluations": [
+                {
+                    "step_id": 0,
+                    "dimension_scores": step0_scores,
+                    "step_quality_summary": "Adequate search",
+                },
+                {
+                    "step_id": 1,
+                    "dimension_scores": step1_scores,
+                    "step_quality_summary": "Data collected",
+                },
+                {
+                    "step_id": 2,
+                    "dimension_scores": step2_scores,
+                    "step_quality_summary": "Good recommendation",
+                },
+            ],
+        }
+    )
     return MockLLMClient(
         responses={
             "DynamicRubric": mock_rubric_response,

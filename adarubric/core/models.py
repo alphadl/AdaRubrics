@@ -101,8 +101,7 @@ class EvalDimension(BaseModel):
         expected = {1, 2, 3, 4, 5}
         if set(v.keys()) != expected:
             raise ValueError(
-                f"scoring_criteria must have exactly keys {expected}, "
-                f"got {set(v.keys())}"
+                f"scoring_criteria must have exactly keys {expected}, got {set(v.keys())}"
             )
         return v
 
