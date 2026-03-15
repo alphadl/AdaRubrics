@@ -1,7 +1,17 @@
 # AdaRubric
 
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+<p align="center">
+  <a href="https://github.com/alphadl/AdaRubrics/actions/workflows/ci.yml">
+    <img src="https://github.com/alphadl/AdaRubrics/actions/workflows/ci.yml/badge.svg" alt="CI" />
+  </a>
+  <a href="https://pypi.org/project/adarubric/">
+    <img src="https://img.shields.io/pypi/v/adarubric" alt="PyPI" />
+  </a>
+  <img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="Python 3.10+" />
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/license-Apache--2.0-green" alt="License" />
+  </a>
+</p>
 
 <p align="center">
   <img src="assets/logo.jpg" width="220" alt="AdaRubric Logo" />
