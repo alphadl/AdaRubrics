@@ -16,10 +16,7 @@ def extract_json_substring(text: str) -> str:
             start = t.index(marker) + len(marker)
             rest = t[start:]
             fence_end = rest.find("```")
-            if fence_end != -1:
-                t = rest[:fence_end].strip()
-            else:
-                t = rest.strip()
+            t = rest[:fence_end].strip() if fence_end != -1 else rest.strip()
             break
 
     for open_char, close_char in ("{", "}"), ("[", "]"):

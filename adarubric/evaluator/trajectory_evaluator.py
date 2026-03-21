@@ -257,9 +257,7 @@ class LLMTrajectoryEvaluator(TrajectoryEvaluatorBase):
         """Evaluate multiple trajectories concurrently with bounded parallelism."""
         budget = max_tokens if max_tokens is not None else self._max_tokens
         conc = (
-            max(1, max_concurrent)
-            if max_concurrent is not None
-            else self._default_max_concurrent
+            max(1, max_concurrent) if max_concurrent is not None else self._default_max_concurrent
         )
         sem = asyncio.Semaphore(conc)
 
