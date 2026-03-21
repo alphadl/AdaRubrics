@@ -18,8 +18,10 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass, field
+from typing import Any
 
 import numpy as np
+from numpy.typing import NDArray
 
 from adarubric.core.models import DynamicRubric, Trajectory, TrajectoryEvaluation
 from adarubric.evaluator.base import TrajectoryEvaluatorBase
@@ -28,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 def krippendorffs_alpha(
-    ratings: np.ndarray,
+    ratings: NDArray[Any],
     level_of_measurement: str = "interval",
 ) -> float:
     """Compute Krippendorff's alpha for reliability estimation.
