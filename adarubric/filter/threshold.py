@@ -83,8 +83,11 @@ class PercentileFilter(TrajectoryFilter):
         passed = [ev for ev in evaluations if ev.passed_threshold]
 
         if len(passed) < self.min_survivors:
+            for ev in evaluations:
+                ev.passed_threshold = False
             ranked = sorted(evaluations, key=lambda e: e.global_score, reverse=True)
-            passed = ranked[: self.min_survivors]
+            take = min(self.min_survivors, len(ranked))
+            passed = ranked[:take]
             for ev in passed:
                 ev.passed_threshold = True
 
@@ -134,7 +137,17 @@ class DimensionAwareFilter(TrajectoryFilter):
                 ev.passed_threshold = False
                 continue
             survives = True
-            for dim_name, dim_score in ev.dimension_global_scores.items():
+            rubric_names = [d.name for d in ev.rubric_used.dimensions]
+            for dim_name in rubric_names:
+                dim_score = ev.dimension_global_scores.get(dim_name)
+                if dim_score is None:
+                    logger.warning(
+                        "Trajectory %s rejected: missing global score for rubric dimension %r",
+                        ev.trajectory_id,
+                        dim_name,
+                    )
+                    survives = False
+                    break
                 threshold = self.dimension_thresholds.get(dim_name, self.default_threshold)
                 if dim_score < threshold:
                     survives = False

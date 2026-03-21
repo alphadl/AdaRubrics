@@ -15,6 +15,7 @@ htmlcov/
 *.log
 .env
 .venv/
+.venv312/
 venv/
 cursor_prompt_adarubric.md
 .DS_Store

@@ -78,10 +78,13 @@ class LLMTrajectoryEvaluator(TrajectoryEvaluatorBase):
         *,
         aggregator: AggregationStrategy | None = None,
         max_concurrent: int = 5,
+        max_tokens: int = 8192,
     ) -> None:
         self._client = client
         self._aggregator = aggregator or WeightedMeanAggregator()
-        self._semaphore = asyncio.Semaphore(max_concurrent)
+        self._default_max_concurrent = max(1, max_concurrent)
+        self._max_tokens = max_tokens
+        self._semaphore = asyncio.Semaphore(self._default_max_concurrent)
 
     def _build_messages(
         self,
@@ -132,8 +135,34 @@ class LLMTrajectoryEvaluator(TrajectoryEvaluatorBase):
         rubric: DynamicRubric,
     ) -> TrajectoryEvaluation:
         """Convert parsed LLM output into the canonical evaluation model."""
-        step_evals: list[StepEvaluation] = []
+        by_step: dict[int, _StepEvalRaw] = {}
         for raw_step in raw.step_evaluations:
+            if raw_step.step_id in by_step:
+                logger.warning(
+                    "Duplicate evaluation for step_id=%d; keeping last occurrence",
+                    raw_step.step_id,
+                )
+            by_step[raw_step.step_id] = raw_step
+
+        expected_ids = {s.step_id for s in trajectory.steps}
+        missing = expected_ids - by_step.keys()
+        extra = by_step.keys() - expected_ids
+        if missing:
+            logger.warning(
+                "Missing LLM evaluation for trajectory %s step_ids=%s",
+                trajectory.trajectory_id,
+                sorted(missing),
+            )
+        if extra:
+            logger.warning(
+                "LLM returned evaluations for unknown step_ids=%s (trajectory %s)",
+                sorted(extra),
+                trajectory.trajectory_id,
+            )
+
+        ordered_ids = sorted(by_step.keys())
+        step_evals: list[StepEvaluation] = []
+        for raw_step in (by_step[i] for i in ordered_ids):
             valid_dims = rubric.dimension_names
             dropped = [
                 ds.dimension_name
@@ -183,15 +212,17 @@ class LLMTrajectoryEvaluator(TrajectoryEvaluatorBase):
         *,
         temperature: float = 0.0,
         task_instruction: str = "",
+        max_tokens: int | None = None,
     ) -> TrajectoryEvaluation:
         messages = self._build_messages(trajectory, rubric, task_instruction)
+        budget = max_tokens if max_tokens is not None else self._max_tokens
 
         try:
             raw = await self._client.generate_structured(
                 messages,
                 _EvaluationResponse,
                 temperature=temperature,
-                max_tokens=8192,
+                max_tokens=budget,
             )
         except Exception as exc:
             raise EvaluationError(
@@ -220,16 +251,26 @@ class LLMTrajectoryEvaluator(TrajectoryEvaluatorBase):
         *,
         temperature: float = 0.0,
         task_instruction: str = "",
+        max_tokens: int | None = None,
+        max_concurrent: int | None = None,
     ) -> list[TrajectoryEvaluation]:
         """Evaluate multiple trajectories concurrently with bounded parallelism."""
+        budget = max_tokens if max_tokens is not None else self._max_tokens
+        conc = (
+            max(1, max_concurrent)
+            if max_concurrent is not None
+            else self._default_max_concurrent
+        )
+        sem = asyncio.Semaphore(conc)
 
         async def _eval_one(traj: Trajectory) -> TrajectoryEvaluation:
-            async with self._semaphore:
+            async with sem:
                 return await self.evaluate(
                     traj,
                     rubric,
                     temperature=temperature,
                     task_instruction=task_instruction,
+                    max_tokens=budget,
                 )
 
         return list(await asyncio.gather(*[_eval_one(t) for t in trajectories]))

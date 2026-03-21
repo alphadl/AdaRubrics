@@ -22,12 +22,12 @@ classifiers = [
 dependencies = [
     "pydantic>=2.0,<3.0",
     "openai>=1.0",
-    "tenacity>=8.0",
     "numpy>=1.24",
 ]
 
 [project.optional-dependencies]
-vllm = ["vllm>=0.4"]
+# vLLM 及其 NVIDIA 依赖仅在 Linux 上提供 wheel；在 macOS 上安装会失败（如 nvidia-cudnn-frontend）。
+vllm = ["vllm>=0.4; sys_platform == 'linux'"]
 yaml = ["pyyaml>=6.0"]
 dev = [
     "pytest>=7.0",

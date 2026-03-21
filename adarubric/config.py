@@ -27,7 +27,11 @@ class LLMConfig(BaseModel):
     base_url: str | None = None
     max_retries: int = Field(default=3, ge=1)
     temperature: float = Field(default=0.0, ge=0.0, le=2.0)
-    max_tokens: int = Field(default=4096, ge=256)
+    max_tokens: int = Field(
+        default=4096,
+        ge=256,
+        description="Default max completion tokens; generator/evaluator may override",
+    )
 
 
 class GeneratorConfig(BaseModel):
@@ -36,6 +40,11 @@ class GeneratorConfig(BaseModel):
     num_dimensions: int = Field(default=4, ge=2, le=10)
     include_few_shot: bool = True
     temperature: float = Field(default=0.0, ge=0.0, le=2.0)
+    max_tokens: int | None = Field(
+        default=None,
+        ge=256,
+        description="Rubric generation budget; None uses llm.max_tokens",
+    )
 
 
 class EvaluatorConfig(BaseModel):
@@ -52,6 +61,11 @@ class EvaluatorConfig(BaseModel):
     )
     max_concurrent: int = Field(default=5, ge=1)
     temperature: float = Field(default=0.0, ge=0.0, le=2.0)
+    max_tokens: int | None = Field(
+        default=None,
+        ge=256,
+        description="Trajectory eval budget; None uses max(llm.max_tokens, 8192)",
+    )
 
 
 class FilterConfig(BaseModel):
@@ -97,14 +111,17 @@ class AdaRubricConfig(BaseModel):
         config = cls.model_validate(data)
         return _apply_env_overrides(config)
 
-    def to_json(self, path: str | Path) -> None:
-        """Save config to a JSON file."""
+    def to_json(self, path: str | Path, *, include_secrets: bool = False) -> None:
+        """Save config to a JSON file.
+
+        By default ``llm.api_key`` is omitted so keys are not committed accidentally.
+        """
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(
-            json.dumps(self.model_dump(), indent=2) + "\n",
-            encoding="utf-8",
-        )
+        payload = self.model_dump(mode="json")
+        if not include_secrets and payload.get("llm") and isinstance(payload["llm"], dict):
+            payload["llm"] = {k: v for k, v in payload["llm"].items() if k != "api_key"}
+        path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 
 def _apply_env_overrides(config: AdaRubricConfig) -> AdaRubricConfig:

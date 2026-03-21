@@ -21,6 +21,7 @@ class RubricGenerator(ABC):
         *,
         num_dimensions: int = 4,
         temperature: float = 0.0,
+        max_tokens: int | None = None,
     ) -> DynamicRubric:
         """Generate a dynamic rubric for the given task.
 
@@ -32,9 +33,12 @@ class RubricGenerator(ABC):
             Target number of dimensions (the generator may produce fewer).
         temperature : float
             LLM sampling temperature (higher = more creative dimensions).
+        max_tokens : int | None
+            Completion token limit; ``None`` uses the generator implementation default.
 
         Returns
         -------
         DynamicRubric
             A rubric with ``num_dimensions`` task-specific evaluation axes.
         """
+        ...

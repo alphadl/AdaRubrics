@@ -8,6 +8,7 @@ constrained decoding when available.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from typing import Any, TypeVar, cast
@@ -16,39 +17,24 @@ from pydantic import BaseModel, ValidationError
 
 from adarubric.core.exceptions import LLMClientError
 from adarubric.llm.base import LLMClient
+from adarubric.llm.json_extract import extract_json_substring
+
+try:
+    from openai import (
+        APIConnectionError,
+        APIError,
+        APITimeoutError,
+        AsyncOpenAI,
+        RateLimitError,
+    )
+except ImportError as e:
+    raise ImportError("openai package is required for VLLMClient") from e
 
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BaseModel)
 
-
-def _extract_json(text: str) -> str:
-    """Extract the first JSON object or array from ``text``.
-
-    Handles common LLM output patterns where JSON is wrapped in markdown
-    code fences or surrounded by conversational text.
-    """
-    for fence in ("```json", "```"):
-        if fence in text:
-            start = text.index(fence) + len(fence)
-            end = text.index("```", start) if "```" in text[start:] else len(text)
-            text = text[start:end].strip()
-            break
-
-    for open_char, close_char in [("{", "}"), ("[", "]")]:
-        first = text.find(open_char)
-        if first == -1:
-            continue
-        depth = 0
-        for i in range(first, len(text)):
-            if text[i] == open_char:
-                depth += 1
-            elif text[i] == close_char:
-                depth -= 1
-            if depth == 0:
-                return text[first : i + 1]
-
-    return text
+_RETRYABLE = (APIConnectionError, APITimeoutError, RateLimitError)
 
 
 class VLLMClient(LLMClient):
@@ -63,6 +49,9 @@ class VLLMClient(LLMClient):
     use_guided_decoding : bool
         If True, send the Pydantic schema via ``guided_json`` for
         grammar-constrained generation (requires vLLM >= 0.4.1).
+    max_retries : int
+        Retries for transient transport/rate-limit errors (same policy as
+        :class:`OpenAIClient`).
     """
 
     def __init__(
@@ -72,15 +61,12 @@ class VLLMClient(LLMClient):
         base_url: str = "http://localhost:8000/v1",
         api_key: str = "EMPTY",
         use_guided_decoding: bool = True,
+        max_retries: int = 3,
     ) -> None:
         self.model = model
         self.base_url = base_url
         self.use_guided_decoding = use_guided_decoding
-
-        try:
-            from openai import AsyncOpenAI
-        except ImportError as e:
-            raise ImportError("openai package is required for VLLMClient") from e
+        self._max_retries = max(1, max_retries)
 
         self._client = AsyncOpenAI(api_key=api_key, base_url=base_url)
 
@@ -101,11 +87,33 @@ class VLLMClient(LLMClient):
         if extra_body:
             kwargs["extra_body"] = extra_body
 
-        response = await self._client.chat.completions.create(**kwargs)
-        content = response.choices[0].message.content
-        if content is None:
-            raise LLMClientError("vLLM returned empty content")
-        return cast(str, content)
+        delay = 2.0
+        last_exc: Exception | None = None
+        for attempt in range(self._max_retries):
+            try:
+                response = await self._client.chat.completions.create(**kwargs)
+                content = response.choices[0].message.content
+                if content is None:
+                    raise LLMClientError("vLLM returned empty content")
+                return cast(str, content)
+            except _RETRYABLE as exc:
+                last_exc = exc
+                if attempt + 1 >= self._max_retries:
+                    break
+                logger.warning(
+                    "vLLM transient error (%s), retry %d/%d in %.1fs",
+                    type(exc).__name__,
+                    attempt + 1,
+                    self._max_retries,
+                    delay,
+                )
+                await asyncio.sleep(delay)
+                delay = min(delay * 2.0, 60.0)
+            except APIError:
+                raise
+
+        assert last_exc is not None
+        raise last_exc
 
     async def generate_structured(
         self,
@@ -140,16 +148,22 @@ class VLLMClient(LLMClient):
                 max_tokens=max_tokens,
                 extra_body=extra_body,
             )
-        except Exception as exc:
+        except APIError as exc:
             raise LLMClientError(
                 f"vLLM API error: {exc}",
                 context={"model": self.model},
             ) from exc
 
-        extracted = _extract_json(raw) if not self.use_guided_decoding else raw
+        extracted = raw.strip() if self.use_guided_decoding else extract_json_substring(raw)
         try:
             return response_model.model_validate_json(extracted)
         except (ValidationError, json.JSONDecodeError) as exc:
+            if self.use_guided_decoding:
+                try:
+                    fallback = extract_json_substring(raw)
+                    return response_model.model_validate_json(fallback)
+                except (ValidationError, json.JSONDecodeError):
+                    pass
             logger.warning("Failed to parse vLLM response:\n%s", raw[:500])
             raise LLMClientError(
                 f"Failed to parse structured response: {exc}",
@@ -163,7 +177,13 @@ class VLLMClient(LLMClient):
         temperature: float = 0.0,
         max_tokens: int = 4096,
     ) -> str:
-        return await self._chat(messages, temperature=temperature, max_tokens=max_tokens)
+        try:
+            return await self._chat(messages, temperature=temperature, max_tokens=max_tokens)
+        except APIError as exc:
+            raise LLMClientError(
+                f"vLLM API error: {exc}",
+                context={"model": self.model},
+            ) from exc
 
     async def close(self) -> None:
         await self._client.close()

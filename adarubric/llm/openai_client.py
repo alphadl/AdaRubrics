@@ -6,23 +6,25 @@ Works with any API that implements the OpenAI chat completions interface
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from typing import Any, TypeVar, cast
 
 from pydantic import BaseModel, ValidationError
-from tenacity import (
-    retry,
-    retry_if_exception_type,
-    stop_after_attempt,
-    wait_exponential,
-)
 
 from adarubric.core.exceptions import LLMClientError
 from adarubric.llm.base import LLMClient
+from adarubric.llm.json_extract import extract_json_substring
 
 try:
-    from openai import APIError, APITimeoutError, AsyncOpenAI, RateLimitError
+    from openai import (
+        APIConnectionError,
+        APIError,
+        APITimeoutError,
+        AsyncOpenAI,
+        RateLimitError,
+    )
 except ImportError as e:
     raise ImportError(
         "openai package is required. Install with: pip install 'adarubric[openai]'"
@@ -32,38 +34,7 @@ logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BaseModel)
 
-_RETRYABLE = (APITimeoutError, RateLimitError)
-
-
-def _extract_json(text: str) -> str:
-    """Extract the first JSON object or array from ``text``.
-
-    Handles common LLM output patterns where JSON is wrapped in markdown
-    code fences or surrounded by conversational text.
-    """
-    # Strip markdown code fences
-    for fence in ("```json", "```"):
-        if fence in text:
-            start = text.index(fence) + len(fence)
-            end = text.index("```", start) if "```" in text[start:] else len(text)
-            text = text[start:end].strip()
-            break
-
-    # Find the outermost braces / brackets
-    for open_char, close_char in [("{", "}"), ("[", "]")]:
-        first = text.find(open_char)
-        if first == -1:
-            continue
-        depth = 0
-        for i in range(first, len(text)):
-            if text[i] == open_char:
-                depth += 1
-            elif text[i] == close_char:
-                depth -= 1
-            if depth == 0:
-                return text[first : i + 1]
-
-    return text
+_RETRYABLE = (APIConnectionError, APITimeoutError, RateLimitError)
 
 
 class OpenAIClient(LLMClient):
@@ -90,15 +61,9 @@ class OpenAIClient(LLMClient):
         max_retries: int = 3,
     ) -> None:
         self.model = model
-        self._max_retries = max_retries
+        self._max_retries = max(1, max_retries)
         self._client = AsyncOpenAI(api_key=api_key, base_url=base_url)
 
-    @retry(
-        retry=retry_if_exception_type(_RETRYABLE),
-        wait=wait_exponential(multiplier=1, min=2, max=60),
-        stop=stop_after_attempt(3),
-        reraise=True,
-    )
     async def _chat(
         self,
         messages: list[dict[str, str]],
@@ -107,6 +72,7 @@ class OpenAIClient(LLMClient):
         max_tokens: int,
         json_mode: bool = False,
     ) -> str:
+        """Chat completion with exponential backoff on transient errors."""
         kwargs: dict[str, Any] = {
             "model": self.model,
             "messages": messages,
@@ -116,11 +82,33 @@ class OpenAIClient(LLMClient):
         if json_mode:
             kwargs["response_format"] = {"type": "json_object"}
 
-        response = await self._client.chat.completions.create(**kwargs)
-        content = response.choices[0].message.content
-        if content is None:
-            raise LLMClientError("LLM returned empty content")
-        return cast(str, content)
+        delay = 2.0
+        last_exc: Exception | None = None
+        for attempt in range(self._max_retries):
+            try:
+                response = await self._client.chat.completions.create(**kwargs)
+                content = response.choices[0].message.content
+                if content is None:
+                    raise LLMClientError("LLM returned empty content")
+                return cast(str, content)
+            except _RETRYABLE as exc:
+                last_exc = exc
+                if attempt + 1 >= self._max_retries:
+                    break
+                logger.warning(
+                    "OpenAI transient error (%s), retry %d/%d in %.1fs",
+                    type(exc).__name__,
+                    attempt + 1,
+                    self._max_retries,
+                    delay,
+                )
+                await asyncio.sleep(delay)
+                delay = min(delay * 2.0, 60.0)
+            except APIError:
+                raise
+
+        assert last_exc is not None
+        raise last_exc
 
     async def generate_structured(
         self,
@@ -156,7 +144,7 @@ class OpenAIClient(LLMClient):
                 context={"model": self.model},
             ) from exc
 
-        extracted = _extract_json(raw)
+        extracted = extract_json_substring(raw)
         try:
             return response_model.model_validate_json(extracted)
         except (ValidationError, json.JSONDecodeError) as exc:

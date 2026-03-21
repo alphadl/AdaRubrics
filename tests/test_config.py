@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 
 from adarubric.config import AdaRubricConfig
+from adarubric.pipeline import _default_eval_max_tokens, _default_rubric_max_tokens
 
 
 class TestConfigFromFile:
@@ -32,12 +33,46 @@ class TestConfigFromFile:
         loaded = AdaRubricConfig.from_json(path)
         assert loaded.llm.model == "test-model"
 
+    def test_to_json_excludes_api_key_by_default(self, tmp_path):
+        cfg = AdaRubricConfig()
+        cfg.llm.api_key = "sk-secret"
+        path = tmp_path / "out.json"
+        cfg.to_json(path)
+        data = json.loads(path.read_text())
+        assert "api_key" not in data.get("llm", {})
+
+    def test_to_json_include_secrets(self, tmp_path):
+        cfg = AdaRubricConfig()
+        cfg.llm.api_key = "sk-secret"
+        path = tmp_path / "secret.json"
+        cfg.to_json(path, include_secrets=True)
+        data = json.loads(path.read_text())
+        assert data["llm"]["api_key"] == "sk-secret"
+
     def test_defaults(self):
         config = AdaRubricConfig()
         assert config.llm.provider == "openai"
         assert config.llm.model == "gpt-4o"
         assert config.evaluator.aggregation_strategy == "weighted_mean"
         assert config.filter.min_score == 3.0
+
+    def test_default_rubric_max_tokens_resolution(self):
+        c = AdaRubricConfig()
+        c.llm.max_tokens = 2048
+        assert _default_rubric_max_tokens(c) == 2048
+        c.generator.max_tokens = 512
+        assert _default_rubric_max_tokens(c) == 512
+
+    def test_default_eval_max_tokens_resolution(self):
+        c = AdaRubricConfig()
+        c.llm.max_tokens = 4096
+        assert _default_eval_max_tokens(c) == 8192
+        c.evaluator.max_tokens = 12_000
+        assert _default_eval_max_tokens(c) == 12_000
+
+    def test_default_token_helpers_without_config(self):
+        assert _default_rubric_max_tokens(None) == 4096
+        assert _default_eval_max_tokens(None) == 8192
 
     def test_env_override(self, tmp_path, monkeypatch):
         monkeypatch.setenv("OPENAI_API_KEY", "sk-test-key")

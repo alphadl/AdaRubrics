@@ -33,9 +33,16 @@ class LLMRubricGenerator(RubricGenerator):
         Whether to include the few-shot example in the prompt.
     """
 
-    def __init__(self, client: LLMClient, *, include_few_shot: bool = True) -> None:
+    def __init__(
+        self,
+        client: LLMClient,
+        *,
+        include_few_shot: bool = True,
+        max_tokens: int = 4096,
+    ) -> None:
         self._client = client
         self._include_few_shot = include_few_shot
+        self._max_tokens = max_tokens
 
     def _build_messages(self, task: TaskDescription, num_dimensions: int) -> list[dict[str, str]]:
         system_content = RUBRIC_GENERATION_SYSTEM.format(num_dimensions=num_dimensions)
@@ -64,15 +71,17 @@ class LLMRubricGenerator(RubricGenerator):
         *,
         num_dimensions: int = 4,
         temperature: float = 0.0,
+        max_tokens: int | None = None,
     ) -> DynamicRubric:
         messages = self._build_messages(task, num_dimensions)
+        budget = max_tokens if max_tokens is not None else self._max_tokens
 
         try:
             rubric = await self._client.generate_structured(
                 messages,
                 DynamicRubric,
                 temperature=temperature,
-                max_tokens=4096,
+                max_tokens=budget,
             )
         except Exception as exc:
             raise RubricGenerationError(

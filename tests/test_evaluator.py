@@ -15,6 +15,9 @@ from adarubric.evaluator.aggregator import (
     MinScoreAggregator,
     WeightedMeanAggregator,
 )
+from adarubric.evaluator.trajectory_evaluator import LLMTrajectoryEvaluator
+
+from .conftest import MockLLMClient
 
 
 def _make_rubric(weights: list[float] | None = None) -> DynamicRubric:
@@ -160,3 +163,16 @@ class TestMinScoreAggregator:
         agg = MinScoreAggregator()
         _, overall = agg.aggregate_steps(steps, rubric)
         assert overall == 3.0
+
+
+@pytest.mark.asyncio
+async def test_llm_evaluator_max_tokens(
+    mock_llm_client: MockLLMClient,
+    sample_trajectory,
+    sample_rubric,
+):
+    ev = LLMTrajectoryEvaluator(mock_llm_client, max_tokens=3333)
+    await ev.evaluate(sample_trajectory, sample_rubric)
+    assert mock_llm_client.last_max_tokens == 3333
+    await ev.evaluate(sample_trajectory, sample_rubric, max_tokens=4444)
+    assert mock_llm_client.last_max_tokens == 4444

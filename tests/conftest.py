@@ -38,6 +38,7 @@ class MockLLMClient(LLMClient):
         self._responses = responses or {}
         self.call_count = 0
         self.last_messages: list[dict[str, str]] = []
+        self.last_max_tokens: int | None = None
 
     async def generate_structured(
         self,
@@ -49,6 +50,7 @@ class MockLLMClient(LLMClient):
     ) -> T:
         self.call_count += 1
         self.last_messages = messages
+        self.last_max_tokens = max_tokens
         model_name = response_model.__name__
         if model_name in self._responses:
             return response_model.model_validate_json(self._responses[model_name])

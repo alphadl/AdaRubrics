@@ -144,6 +144,7 @@ async def evaluate_consistency(
     n_runs: int = 5,
     temperature: float = 0.3,
     task_instruction: str = "",
+    max_tokens: int | None = None,
 ) -> ConsistencyReport:
     """Run evaluation N times and compute inter-rater reliability.
 
@@ -161,6 +162,8 @@ async def evaluate_consistency(
         Sampling temperature (must be > 0 for variability).
     task_instruction : str
         Task instruction for evaluation context.
+    max_tokens : int | None
+        LLM completion limit per run; ``None`` uses the evaluator default.
 
     Returns
     -------
@@ -178,6 +181,7 @@ async def evaluate_consistency(
                     rubric,
                     temperature=temperature,
                     task_instruction=task_instruction,
+                    max_tokens=max_tokens,
                 )
                 for _ in range(n_runs)
             ]

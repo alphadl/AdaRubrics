@@ -22,6 +22,7 @@ class TrajectoryEvaluatorBase(ABC):
         *,
         temperature: float = 0.0,
         task_instruction: str = "",
+        max_tokens: int | None = None,
     ) -> TrajectoryEvaluation:
         """Score a trajectory against the given rubric.
 
@@ -35,12 +36,15 @@ class TrajectoryEvaluatorBase(ABC):
             LLM sampling temperature for evaluation.
         task_instruction : str
             Original task instruction for evaluation context.
+        max_tokens : int | None
+            Completion token limit; ``None`` uses evaluator default.
 
         Returns
         -------
         TrajectoryEvaluation
             Complete evaluation with step-level and global scores.
         """
+        ...
 
     async def evaluate_batch(
         self,
@@ -49,6 +53,8 @@ class TrajectoryEvaluatorBase(ABC):
         *,
         temperature: float = 0.0,
         task_instruction: str = "",
+        max_tokens: int | None = None,
+        max_concurrent: int | None = None,
     ) -> list[TrajectoryEvaluation]:
         """Evaluate multiple trajectories against the same rubric.
 
@@ -62,6 +68,7 @@ class TrajectoryEvaluatorBase(ABC):
                 rubric,
                 temperature=temperature,
                 task_instruction=task_instruction,
+                max_tokens=max_tokens,
             )
             results.append(result)
         return results

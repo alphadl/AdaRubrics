@@ -84,7 +84,10 @@ class WeightedMeanAggregator(AggregationStrategy):
                 continue
             weighted_sum = sum(s * w for s, w in score_weight_pairs)
             weight_sum = sum(w for _, w in score_weight_pairs)
-            dimension_globals[dim_name] = weighted_sum / weight_sum
+            if weight_sum <= 0:
+                dimension_globals[dim_name] = 0.0
+            else:
+                dimension_globals[dim_name] = weighted_sum / weight_sum
 
         total_rubric_weight = rubric.total_weight
         if total_rubric_weight == 0:

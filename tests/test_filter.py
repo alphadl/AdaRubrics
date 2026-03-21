@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from adarubric.core.models import DynamicRubric, TrajectoryEvaluation
+from adarubric.core.models import DynamicRubric, EvalDimension, TrajectoryEvaluation
 from adarubric.filter.threshold import (
     AbsoluteThresholdFilter,
     CompositeFilter,
@@ -84,11 +84,30 @@ class TestPercentileFilter:
         assert passed == []
 
 
+def _two_dim_rubric() -> DynamicRubric:
+    return DynamicRubric(
+        task_id="t1",
+        dimensions=[
+            EvalDimension(
+                name="D1",
+                description="First required dimension for filter tests",
+                scoring_criteria={1: "1", 2: "2", 3: "3", 4: "4", 5: "5"},
+            ),
+            EvalDimension(
+                name="D2",
+                description="Second required dimension for filter tests",
+                scoring_criteria={1: "1", 2: "2", 3: "3", 4: "4", 5: "5"},
+            ),
+        ],
+    )
+
+
 class TestDimensionAwareFilter:
     def test_fails_on_low_dimension(self):
+        rubric = _two_dim_rubric()
         evals = [
-            _make_eval("a", 4.0, dim_scores={"D1": 4.0, "D2": 1.5}),
-            _make_eval("b", 3.5, dim_scores={"D1": 3.0, "D2": 3.0}),
+            _make_eval("a", 4.0, dim_scores={"D1": 4.0, "D2": 1.5}, rubric=rubric),
+            _make_eval("b", 3.5, dim_scores={"D1": 3.0, "D2": 3.0}, rubric=rubric),
         ]
         f = DimensionAwareFilter(default_threshold=2.5)
         passed = f.filter(evals)
@@ -113,6 +132,15 @@ class TestDimensionAwareFilter:
         passed = f.filter(evals)
         assert len(passed) == 1
         assert passed[0].trajectory_id == "b"
+        assert evals[0].passed_threshold is False
+
+    def test_rejects_missing_rubric_dimension_score(self):
+        rubric = _two_dim_rubric()
+        evals = [
+            _make_eval("a", 4.0, dim_scores={"D1": 4.0}, rubric=rubric),
+        ]
+        passed = DimensionAwareFilter(default_threshold=2.5).filter(evals)
+        assert passed == []
         assert evals[0].passed_threshold is False
 
 

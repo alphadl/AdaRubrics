@@ -53,3 +53,12 @@ async def test_few_shot_excluded(mock_llm_client: MockLLMClient, sample_task: Ta
     await generator.generate(sample_task)
     system_msg = mock_llm_client.last_messages[0]["content"]
     assert "SearchStrategyQuality" not in system_msg
+
+
+@pytest.mark.asyncio
+async def test_generate_respects_max_tokens(mock_llm_client: MockLLMClient, sample_task: TaskDescription):
+    generator = LLMRubricGenerator(mock_llm_client, max_tokens=1111)
+    await generator.generate(sample_task)
+    assert mock_llm_client.last_max_tokens == 1111
+    await generator.generate(sample_task, max_tokens=2222)
+    assert mock_llm_client.last_max_tokens == 2222
