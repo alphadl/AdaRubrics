@@ -89,9 +89,9 @@ TaskDescription
        │
        ▼
 ┌─────────────┐     ┌────────────────────┐     ┌──────────────────┐
-│   Rubric     │     │    Trajectory       │     │      Data        │
-│  Generator   │────▶│    Evaluator        │────▶│     Filter       │
-│  (LLM-based) │     │ (step + global)     │     │ (survival gate)  │
+│   Rubric    │     │    Trajectory      │     │      Data        │
+│  Generator  │────▶│    Evaluator       │────▶│     Filter       │
+│  (LLM-based)│     │ (step + global)    │     │ (survival gate)  │
 └─────────────┘     └────────────────────┘     └──────────────────┘
        │                     │                          │
   DynamicRubric     TrajectoryEvaluation[]      Survivors[]
