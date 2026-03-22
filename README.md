@@ -33,7 +33,6 @@
 ## Paper
 
 **AdaRubric: Task-Adaptive Rubrics for LLM Agent Evaluation**
-Liang Ding · Alibaba Group
 
 📄 **[Read the paper (PDF)](assets/adarubrics.pdf)**
 
