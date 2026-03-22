@@ -34,7 +34,7 @@
 
 **AdaRubric: Task-Adaptive Rubrics for LLM Agent Evaluation**
 
-📄 **[Read the paper (PDF)](assets/AdaRubric.pdf)**
+📄 **[Read the paper (PDF)](assets/adarubrics.pdf)**
 
 > LLM-as-Judge evaluation fails on agent tasks because a fixed rubric cannot capture what matters for *this* task: code debugging demands *Correctness* and *Error Handling*; web navigation demands *Goal Alignment* and *Action Efficiency*. AdaRubric generates task-specific rubrics on the fly, scores trajectories step-by-step with confidence-weighted per-dimension feedback, and filters preference pairs with the novel **DimensionAwareFilter** — a provably necessary condition for preventing high-scoring dimensions from masking dimension-level failures.
 
