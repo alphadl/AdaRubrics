@@ -1,7 +1,9 @@
-"""AdaRubric — B2B Supply Chain Agent Evaluation.
+"""AdaRubric — Multi-Step API Orchestration Evaluation.
 
 Demonstrates evaluating multiple agent trajectories for a complex
-supply chain sourcing task, with composite filtering.
+procurement API-chaining task, with composite filtering (AbsoluteThreshold
++ DimensionAwareFilter). Shows how the DimensionAwareFilter prevents a
+high average score from masking a catastrophic failure on a single dimension.
 
 Usage:
     export OPENAI_API_KEY="sk-..."
@@ -38,7 +40,7 @@ async def main() -> None:
             "units, compare total cost including shipping, and recommend the "
             "best value option considering both price and lead time."
         ),
-        domain="B2B Supply Chain / Procurement",
+        domain="Procurement API Orchestration",
         complexity="complex",
         expected_tools=[
             "supplier_search",
@@ -170,7 +172,7 @@ async def main() -> None:
     )
 
     print("=" * 60)
-    print("AdaRubric — Supply Chain Agent Evaluation")
+    print("AdaRubric — Multi-Step API Orchestration Evaluation")
     print("=" * 60)
     print(f"\nRubric Dimensions ({len(result.rubric.dimensions)}):")
     for dim in result.rubric.dimensions:
