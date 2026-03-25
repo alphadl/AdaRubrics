@@ -202,10 +202,10 @@ pytest tests/ -v
 If you find AdaRubric useful, please cite:
 
 ```bibtex
-@article{ding2025adarubric,
+@article{ding2026adarubric,
   title     = {AdaRubric: Task-Adaptive Rubrics for LLM Agent Evaluation},
   author    = {Liang Ding},
-  year      = {2025},
+  year      = {2026},
   url       = {https://github.com/alphadl/AdaRubrics}
 }
 ```
