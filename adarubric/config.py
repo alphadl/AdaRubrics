@@ -37,7 +37,7 @@ class LLMConfig(BaseModel):
 class GeneratorConfig(BaseModel):
     """Rubric generator configuration."""
 
-    num_dimensions: int = Field(default=4, ge=2, le=10)
+    num_dimensions: int = Field(default=5, ge=2, le=10)
     include_few_shot: bool = True
     temperature: float = Field(default=0.0, ge=0.0, le=2.0)
     max_tokens: int | None = Field(
@@ -55,7 +55,7 @@ class EvaluatorConfig(BaseModel):
         description="Aggregation: weighted_mean | geometric_mean | min_score",
     )
     recency_decay: float = Field(
-        default=0.0,
+        default=0.5,
         ge=0.0,
         description="Exponential decay for step recency weighting (weighted_mean only)",
     )

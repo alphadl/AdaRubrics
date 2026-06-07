@@ -69,7 +69,7 @@ async def main() -> None:
     config = AdaRubricConfig()
     pipeline = AdaRubricPipeline.from_config(config)
 
-    result = await pipeline.run(task, [trajectory], num_dimensions=4)
+    result = await pipeline.run(task, [trajectory], num_dimensions=5)
 
     print("=== AdaRubric Evaluation Results ===")
     print(f"Task: {task.instruction[:80]}...")

@@ -69,7 +69,7 @@ class LLMRubricGenerator(RubricGenerator):
         self,
         task: TaskDescription,
         *,
-        num_dimensions: int = 4,
+        num_dimensions: int = 5,
         temperature: float = 0.0,
         max_tokens: int | None = None,
     ) -> DynamicRubric:

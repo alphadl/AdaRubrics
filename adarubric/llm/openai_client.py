@@ -21,6 +21,7 @@ try:
     from openai import (
         APIConnectionError,
         APIError,
+        APIStatusError,
         APITimeoutError,
         AsyncOpenAI,
         RateLimitError,
@@ -35,6 +36,8 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T", bound=BaseModel)
 
 _RETRYABLE = (APIConnectionError, APITimeoutError, RateLimitError)
+# 5xx status codes are transient server-side errors and should be retried.
+_RETRYABLE_STATUS = frozenset({500, 502, 503, 504})
 
 
 class OpenAIClient(LLMClient):
@@ -93,19 +96,25 @@ class OpenAIClient(LLMClient):
                 return cast(str, content)
             except _RETRYABLE as exc:
                 last_exc = exc
-                if attempt + 1 >= self._max_retries:
-                    break
-                logger.warning(
-                    "OpenAI transient error (%s), retry %d/%d in %.1fs",
-                    type(exc).__name__,
-                    attempt + 1,
-                    self._max_retries,
-                    delay,
-                )
-                await asyncio.sleep(delay)
-                delay = min(delay * 2.0, 60.0)
+            except APIStatusError as exc:
+                # Only 5xx are transient; client errors (4xx) should not be retried.
+                if exc.status_code not in _RETRYABLE_STATUS:
+                    raise
+                last_exc = exc
             except APIError:
                 raise
+
+            if attempt + 1 >= self._max_retries:
+                break
+            logger.warning(
+                "OpenAI transient error (%s), retry %d/%d in %.1fs",
+                type(last_exc).__name__,
+                attempt + 1,
+                self._max_retries,
+                delay,
+            )
+            await asyncio.sleep(delay)
+            delay = min(delay * 2.0, 60.0)
 
         assert last_exc is not None
         raise last_exc

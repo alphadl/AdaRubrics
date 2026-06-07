@@ -316,7 +316,7 @@ class AdaRubricPipeline:
         num_dimensions : int | None
             Number of rubric dimensions when generating a rubric. If None and the
             pipeline was built with :meth:`from_config`, uses ``config.generator``.
-            Otherwise defaults to 4.
+            Otherwise defaults to 5.
         temperature : float | None
             LLM temperature for trajectory evaluation. If None, uses
             ``config.evaluator.temperature`` when available, else 0.0.
@@ -341,7 +341,7 @@ class AdaRubricPipeline:
 
         nd = num_dimensions
         if nd is None:
-            nd = self._config.generator.num_dimensions if self._config else 4
+            nd = self._config.generator.num_dimensions if self._config else 5
 
         eval_temp = (
             temperature
