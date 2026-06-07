@@ -32,7 +32,7 @@
 
 ## Paper
 
-**AdaRubric: Task-Adaptive Rubrics for LLM Agent Evaluation**
+**AdaRubric: Task-Adaptive Rubrics for Reliable LLM Agent Evaluation and Reward Learning**
 
 📄 **[Read the paper (PDF)](assets/adarubrics.pdf)**
 
@@ -42,7 +42,7 @@
 
 | Metric | Value |
 |---|---|
-| Human correlation (Pearson *r*) | **0.79** (+0.16 over best static baseline) |
+| Human correlation (Pearson *r*) | **0.79** (+0.15 over best static baseline) |
 | Inter-run reliability (Krippendorff's α) | **0.83** (deployment-grade) |
 | DPO task success gain over Prometheus | **+6.8–+8.5 pp** across WebArena / ToolBench / AgentBench |
 | Transfer to SWE-bench code repair | **+4.9 pp** resolve rate (zero rubric engineering) |
@@ -128,7 +128,7 @@ trajectory = Trajectory(
 )
 
 pipeline = AdaRubricPipeline.from_config(AdaRubricConfig())
-result = asyncio.run(pipeline.run(task, [trajectory], num_dimensions=4))
+result = asyncio.run(pipeline.run(task, [trajectory], num_dimensions=5))
 
 print(f"Rubric dimensions: {result.rubric.dimension_names}")
 print(f"Global score:      {result.mean_score:.2f}/5.0")
@@ -203,10 +203,13 @@ If you find AdaRubric useful, please cite:
 
 ```bibtex
 @article{ding2026adarubric,
-  title     = {AdaRubric: Task-Adaptive Rubrics for LLM Agent Evaluation},
-  author    = {Liang Ding},
-  year      = {2026},
-  url       = {https://github.com/alphadl/AdaRubrics}
+  title         = {AdaRubric: Task-Adaptive Rubrics for Reliable LLM Agent Evaluation and Reward Learning},
+  author        = {Liang Ding},
+  year          = {2026},
+  eprint        = {2603.21362},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.AI},
+  url           = {https://github.com/alphadl/AdaRubrics}
 }
 ```
 
