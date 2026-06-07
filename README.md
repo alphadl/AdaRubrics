@@ -44,9 +44,9 @@
 |---|---|
 | Human correlation (Pearson *r*) | **0.79** (+0.15 over best static baseline) |
 | Inter-run reliability (Krippendorff's α) | **0.83** (deployment-grade) |
-| DPO task success gain over Prometheus | **+6.8–+8.5 pp** across WebArena / ToolBench / AgentBench |
-| Transfer to SWE-bench code repair | **+4.9 pp** resolve rate (zero rubric engineering) |
-| PPO convergence acceleration | **+6.6 pp** SR at 5K steps |
+| DPO task success gain over Prometheus | **+6.8–+8.5%** across WebArena / ToolBench / AgentBench |
+| Transfer to SWE-bench code repair | **+4.9%** resolve rate (zero rubric engineering) |
+| PPO convergence acceleration | **+6.6%** SR at 5K steps |
 
 ---
 
