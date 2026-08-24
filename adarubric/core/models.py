@@ -173,7 +173,7 @@ class TrajectoryEvaluation(BaseModel):
     """Complete evaluation result for one trajectory.
 
     Contains step-level scores, per-dimension global scores,
-    an overall global score, and a survival flag.
+    an overall global score, and an optional filter decision.
     """
 
     trajectory_id: str
@@ -182,5 +182,8 @@ class TrajectoryEvaluation(BaseModel):
     step_evaluations: list[StepEvaluation]
     dimension_global_scores: dict[str, float] = Field(default_factory=dict)
     global_score: float = Field(..., ge=0.0, le=5.0)
-    passed_threshold: bool = False
+    passed_threshold: bool | None = Field(
+        default=None,
+        description="Filter decision: None before filtering, otherwise pass/fail",
+    )
     metadata: dict[str, Any] = Field(default_factory=dict)

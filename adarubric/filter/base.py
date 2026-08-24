@@ -22,7 +22,8 @@ class TrajectoryFilter(ABC):
     ) -> list[TrajectoryEvaluation]:
         """Return only the evaluations that pass the filter criteria.
 
-        This method also sets ``passed_threshold`` on each evaluation.
+        This method also sets ``passed_threshold`` to ``True`` or ``False`` on
+        each evaluation. Before filtering, the value is ``None``.
         """
 
     def __call__(

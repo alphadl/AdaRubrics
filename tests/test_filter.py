@@ -43,6 +43,14 @@ def _make_eval(
     )
 
 
+def test_filter_decision_is_unset_before_filtering():
+    evaluation = _make_eval("unfiltered", 3.0)
+
+    assert evaluation.passed_threshold is None
+    restored = TrajectoryEvaluation.model_validate_json(evaluation.model_dump_json())
+    assert restored.passed_threshold is None
+
+
 class TestAbsoluteThresholdFilter:
     def test_filters_below_threshold(self):
         evals = [_make_eval("a", 2.0), _make_eval("b", 3.5), _make_eval("c", 4.0)]
@@ -50,7 +58,7 @@ class TestAbsoluteThresholdFilter:
         passed = f.filter(evals)
         assert len(passed) == 2
         assert all(e.passed_threshold for e in passed)
-        assert not evals[0].passed_threshold
+        assert evals[0].passed_threshold is False
 
     def test_boundary_inclusive(self):
         evals = [_make_eval("a", 3.0)]
