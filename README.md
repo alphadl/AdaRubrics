@@ -71,7 +71,7 @@ TaskDescription
  (N dimensions)    (score + confidence)      (margin-gated)
 ```
 
-1. **Rubric Generator** — Given a task description, an LLM generates *N* orthogonal evaluation dimensions with calibrated 5-point scoring criteria. Rubrics are cached per task type (>95% API cost reduction).
+1. **Rubric Generator** — Given a task description, an LLM generates *N* orthogonal evaluation dimensions with calibrated 5-point scoring criteria. A pre-generated `DynamicRubric` can be reused across runs by passing it to `pipeline.run(..., rubric=rubric)`.
 2. **Trajectory Evaluator** — Each (Thought → Action → Observation) step is scored per-dimension with a confidence weight `c_{k,j} ∈ [0,1]`. Three pluggable aggregators: **Weighted Mean** (default), **Geometric Mean**, **Min Score**.
 3. **Data Filter** — Four composable filters curate high-quality DPO preference pairs. The key innovation is **DimensionAwareFilter**: a trajectory with a perfect average score can still fail catastrophically on a single dimension — DAFilter provably prevents this.
 
