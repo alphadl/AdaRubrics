@@ -13,13 +13,18 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import uuid
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from importlib.metadata import PackageNotFoundError, version
 from typing import Any
 
 from adarubric.config import AdaRubricConfig
 from adarubric.core.exceptions import ConfigurationError
 from adarubric.core.models import (
     DynamicRubric,
+    EvaluationRun,
+    RunProvenance,
     TaskDescription,
     Trajectory,
     TrajectoryEvaluation,
@@ -47,6 +52,61 @@ from adarubric.llm.openai_client import OpenAIClient
 logger = logging.getLogger(__name__)
 
 
+def _qualified_type_name(value: object) -> str:
+    value_type = type(value)
+    return f"{value_type.__module__}.{value_type.__qualname__}"
+
+
+def _installed_version() -> str | None:
+    try:
+        return version("adarubric")
+    except PackageNotFoundError:
+        return None
+
+
+def _llm_component_snapshot(value: object) -> dict[str, Any]:
+    snapshot: dict[str, Any] = {"type": _qualified_type_name(value)}
+    client = getattr(value, "_client", None)
+    if client is not None:
+        client_snapshot: dict[str, Any] = {"type": _qualified_type_name(client)}
+        model = getattr(client, "model", None)
+        if isinstance(model, str):
+            client_snapshot["model"] = model
+        snapshot["client"] = client_snapshot
+    if isinstance(value, LLMRubricGenerator):
+        snapshot["include_few_shot"] = value._include_few_shot
+        snapshot["default_max_tokens"] = value._max_tokens
+    elif isinstance(value, LLMTrajectoryEvaluator):
+        snapshot["default_max_tokens"] = value._max_tokens
+        snapshot["default_max_concurrent"] = value._default_max_concurrent
+    return snapshot
+
+
+def _aggregator_snapshot(evaluator: object) -> dict[str, Any] | None:
+    aggregator = getattr(evaluator, "_aggregator", None)
+    if aggregator is None:
+        return None
+    snapshot: dict[str, Any] = {"type": _qualified_type_name(aggregator)}
+    if isinstance(aggregator, WeightedMeanAggregator):
+        snapshot["recency_decay"] = aggregator.recency_decay
+    return snapshot
+
+
+def _filter_snapshot(filter_: TrajectoryFilter) -> dict[str, Any]:
+    snapshot: dict[str, Any] = {"type": _qualified_type_name(filter_)}
+    if isinstance(filter_, AbsoluteThresholdFilter):
+        snapshot["min_score"] = filter_.min_score
+    elif isinstance(filter_, PercentileFilter):
+        snapshot["percentile"] = filter_.percentile
+        snapshot["min_survivors"] = filter_.min_survivors
+    elif isinstance(filter_, DimensionAwareFilter):
+        snapshot["dimension_thresholds"] = filter_.dimension_thresholds
+        snapshot["default_threshold"] = filter_.default_threshold
+    elif isinstance(filter_, CompositeFilter):
+        snapshot["filters"] = [_filter_snapshot(item) for item in filter_._filters]
+    return snapshot
+
+
 def _default_rubric_max_tokens(config: AdaRubricConfig | None) -> int:
     """Completion token budget for rubric generation."""
     if config is None:
@@ -72,6 +132,9 @@ class PipelineResult:
     all_evaluations: list[TrajectoryEvaluation]
     surviving_evaluations: list[TrajectoryEvaluation]
     metadata: dict[str, Any] = field(default_factory=dict)
+    trajectories: list[Trajectory] = field(default_factory=list, compare=False)
+    provenance: RunProvenance = field(default_factory=RunProvenance, compare=False)
+    run_id: str = field(default_factory=lambda: uuid.uuid4().hex, compare=False)
 
     @property
     def survival_rate(self) -> float:
@@ -84,6 +147,21 @@ class PipelineResult:
         if not self.all_evaluations:
             return 0.0
         return sum(e.global_score for e in self.all_evaluations) / len(self.all_evaluations)
+
+    def to_evaluation_run(self) -> EvaluationRun:
+        """Return a validated, serializable snapshot of this pipeline run."""
+        return EvaluationRun(
+            run_id=self.run_id,
+            task=self.task,
+            trajectories=self.trajectories,
+            rubric=self.rubric,
+            evaluations=self.all_evaluations,
+            surviving_trajectory_ids=[
+                evaluation.trajectory_id for evaluation in self.surviving_evaluations
+            ],
+            provenance=self.provenance,
+            metadata=self.metadata,
+        )
 
 
 _AGGREGATION_STRATEGIES = ("weighted_mean", "geometric_mean", "min_score")
@@ -339,6 +417,9 @@ class AdaRubricPipeline:
         if not trajectories:
             raise ValueError("At least one trajectory is required for evaluation")
 
+        started_at = datetime.now(timezone.utc)
+        rubric_source = "provided" if rubric is not None else "generated"
+
         nd = num_dimensions
         if nd is None:
             nd = self._config.generator.num_dimensions if self._config else 5
@@ -385,11 +466,58 @@ class AdaRubricPipeline:
 
         survivors = self.filter_evaluations(all_evals)
 
+        config_snapshot: dict[str, Any] = {}
+        if self._config is not None:
+            config_snapshot = self._config.model_dump(mode="json")
+            llm_snapshot = config_snapshot.get("llm")
+            if isinstance(llm_snapshot, dict):
+                llm_snapshot.pop("api_key", None)
+
+        effective_max_concurrent: int | None = None
+        if isinstance(self._evaluator, LLMTrajectoryEvaluator):
+            effective_max_concurrent = (
+                max(1, max_concurrent)
+                if max_concurrent is not None
+                else self._evaluator._default_max_concurrent
+            )
+
+        parameters: dict[str, Any] = {
+            "rubric_source": rubric_source,
+            "evaluation_temperature": eval_temp,
+            "evaluation_max_tokens": eval_tokens,
+            "requested_max_concurrent": max_concurrent,
+            "effective_max_concurrent": effective_max_concurrent,
+        }
+        if rubric_source == "generated":
+            parameters.update(
+                {
+                    "num_dimensions": nd,
+                    "rubric_temperature": gen_temp,
+                    "rubric_max_tokens": rubric_tokens,
+                }
+            )
+
+        provenance = RunProvenance(
+            started_at=started_at,
+            completed_at=datetime.now(timezone.utc),
+            adarubric_version=_installed_version(),
+            components={
+                "generator": _llm_component_snapshot(self._generator),
+                "evaluator": _llm_component_snapshot(self._evaluator),
+                "aggregator": _aggregator_snapshot(self._evaluator),
+                "filter": _filter_snapshot(self._filter),
+            },
+            declared_config=config_snapshot,
+            parameters=parameters,
+        )
+
         result = PipelineResult(
             task=task,
             rubric=rubric,
             all_evaluations=all_evals,
             surviving_evaluations=survivors,
+            trajectories=list(trajectories),
+            provenance=provenance,
         )
 
         logger.info(

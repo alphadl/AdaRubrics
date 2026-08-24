@@ -1,7 +1,7 @@
-"""JSONL serialization for trajectories, evaluations, and DPO datasets.
+"""JSON and JSONL serialization for evaluation data.
 
-All functions use JSONL (one JSON object per line) for streaming-friendly
-I/O that works well with large-scale RL training pipelines.
+Collections use JSONL for streaming-friendly I/O. Complete evaluation runs
+use a single JSON document so their task, rubric, and provenance stay together.
 """
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ import json
 import logging
 from pathlib import Path
 
-from adarubric.core.models import Trajectory, TrajectoryEvaluation
+from adarubric.core.models import EvaluationRun, Trajectory, TrajectoryEvaluation
 from adarubric.reward.scalers import DPODataset
 
 logger = logging.getLogger(__name__)
@@ -94,6 +94,20 @@ def load_evaluations(path: str | Path) -> list[TrajectoryEvaluation]:
     else:
         logger.info("Loaded %d evaluations from %s", len(evaluations), path)
     return evaluations
+
+
+def save_evaluation_run(run: EvaluationRun, path: str | Path) -> None:
+    """Write a complete evaluation run to a JSON file."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(run.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    logger.info("Saved evaluation run %s to %s", run.run_id, path)
+
+
+def load_evaluation_run(path: str | Path) -> EvaluationRun:
+    """Load a complete evaluation run from a JSON file."""
+    path = Path(path)
+    return EvaluationRun.model_validate_json(path.read_text(encoding="utf-8"))
 
 
 def export_dpo_dataset(

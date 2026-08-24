@@ -7,8 +7,9 @@ and evaluation results. All models use Pydantic v2 for runtime validation.
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timezone
 from enum import Enum
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -187,3 +188,62 @@ class TrajectoryEvaluation(BaseModel):
         description="Filter decision: None before filtering, otherwise pass/fail",
     )
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+# ---------------------------------------------------------------------------
+# Portable evaluation run
+# ---------------------------------------------------------------------------
+
+
+class RunProvenance(BaseModel):
+    """Serializable context needed to interpret an evaluation run."""
+
+    started_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    completed_at: datetime | None = None
+    adarubric_version: str | None = None
+    components: dict[str, Any] = Field(default_factory=dict)
+    declared_config: dict[str, Any] = Field(default_factory=dict)
+    parameters: dict[str, Any] = Field(default_factory=dict)
+
+
+class EvaluationRun(BaseModel):
+    """A complete, portable snapshot of one evaluation run."""
+
+    schema_version: Literal["1"] = "1"
+    run_id: str = Field(default_factory=lambda: uuid.uuid4().hex)
+    task: TaskDescription
+    trajectories: list[Trajectory] = Field(..., min_length=1)
+    rubric: DynamicRubric
+    evaluations: list[TrajectoryEvaluation] = Field(..., min_length=1)
+    surviving_trajectory_ids: list[str] = Field(default_factory=list)
+    provenance: RunProvenance = Field(default_factory=RunProvenance)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _validate_references(self) -> EvaluationRun:
+        task_id = self.task.task_id
+        if self.rubric.task_id != task_id:
+            raise ValueError("rubric task_id must match the run task_id")
+
+        trajectory_ids = [trajectory.trajectory_id for trajectory in self.trajectories]
+        if len(set(trajectory_ids)) != len(trajectory_ids):
+            raise ValueError("trajectory_ids must be unique within a run")
+        if any(trajectory.task_id != task_id for trajectory in self.trajectories):
+            raise ValueError("trajectory task_ids must match the run task_id")
+
+        evaluation_ids = [evaluation.trajectory_id for evaluation in self.evaluations]
+        if len(set(evaluation_ids)) != len(evaluation_ids):
+            raise ValueError("evaluation trajectory_ids must be unique within a run")
+        if any(evaluation.task_id != task_id for evaluation in self.evaluations):
+            raise ValueError("evaluation task_ids must match the run task_id")
+        if set(evaluation_ids) != set(trajectory_ids):
+            raise ValueError("evaluations must correspond exactly to the run trajectories")
+        if any(evaluation.rubric_used != self.rubric for evaluation in self.evaluations):
+            raise ValueError("evaluations must use the run rubric")
+
+        survivor_ids = self.surviving_trajectory_ids
+        if len(set(survivor_ids)) != len(survivor_ids):
+            raise ValueError("surviving_trajectory_ids must be unique")
+        if not set(survivor_ids).issubset(trajectory_ids):
+            raise ValueError("surviving_trajectory_ids must refer to run trajectories")
+        return self

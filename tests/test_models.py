@@ -8,6 +8,7 @@ from adarubric.core.models import (
     DimensionScore,
     DynamicRubric,
     EvalDimension,
+    EvaluationRun,
     StepEvaluation,
     TaskDescription,
     Trajectory,
@@ -160,3 +161,40 @@ class TestStepEvaluation:
         assert step.score_for("A") is not None
         assert step.score_for("A").score == 5
         assert step.score_for("Z") is None
+
+
+class TestEvaluationRun:
+    def test_rejects_unknown_schema_version(
+        self,
+        sample_task,
+        sample_trajectory,
+        sample_rubric,
+        sample_evaluation,
+    ):
+        with pytest.raises(ValueError, match="schema_version"):
+            EvaluationRun.model_validate(
+                {
+                    "schema_version": "999",
+                    "task": sample_task,
+                    "trajectories": [sample_trajectory],
+                    "rubric": sample_rubric,
+                    "evaluations": [sample_evaluation],
+                }
+            )
+
+    def test_rejects_mismatched_task_ids(
+        self,
+        sample_task,
+        sample_trajectory,
+        sample_rubric,
+        sample_evaluation,
+    ):
+        mismatched = sample_trajectory.model_copy(update={"task_id": "another-task"})
+
+        with pytest.raises(ValueError, match="trajectory task_ids"):
+            EvaluationRun(
+                task=sample_task,
+                trajectories=[mismatched],
+                rubric=sample_rubric,
+                evaluations=[sample_evaluation],
+            )
