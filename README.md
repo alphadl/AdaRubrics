@@ -48,6 +48,8 @@
 | Transfer to SWE-bench code repair | **+4.9%** resolve rate (zero rubric engineering) |
 | PPO convergence acceleration | **+6.6%** SR at 5K steps |
 
+> **Reproducibility note:** These results are reported in the bundled [paper (arXiv v3)](assets/adarubrics.pdf). See Section 4 and Appendix A for the experimental setup. The v0.1.0 repository currently provides the AdaRubric library and unit tests; it does not yet include the benchmark data, configurations, or training and evaluation artifacts needed for end-to-end reproduction.
+
 ---
 
 ## Core Idea
