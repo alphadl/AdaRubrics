@@ -30,6 +30,13 @@ async def test_full_pipeline(
     assert result.rubric is not None
     assert len(result.all_evaluations) == 1
     assert result.survival_rate > 0
+    run = result.to_evaluation_run()
+    assert run.trajectories == [sample_trajectory]
+    assert run.provenance.parameters["rubric_source"] == "generated"
+    assert run.provenance.adarubric_version == "0.1.0"
+    assert run.provenance.components["aggregator"]["recency_decay"] == 0.0
+    assert run.provenance.components["filter"]["min_score"] == 2.0
+    assert result.to_evaluation_run().run_id == run.run_id
 
 
 @pytest.mark.asyncio
@@ -39,15 +46,28 @@ async def test_pipeline_with_prebuilt_rubric(
     sample_trajectory: Trajectory,
     sample_rubric: DynamicRubric,
 ):
+    config = AdaRubricConfig()
+    config.llm.api_key = "must-not-be-serialized"
     pipeline = AdaRubricPipeline(
         generator=LLMRubricGenerator(mock_llm_client),
         evaluator=LLMTrajectoryEvaluator(mock_llm_client),
         filter_=AbsoluteThresholdFilter(min_score=2.0),
+        config=config,
     )
-    result = await pipeline.run(sample_task, [sample_trajectory], rubric=sample_rubric)
+    result = await pipeline.run(
+        sample_task,
+        [sample_trajectory],
+        rubric=sample_rubric,
+        max_concurrent=0,
+    )
 
     assert mock_llm_client.call_count == 1
     assert result.rubric.task_id == sample_rubric.task_id
+    assert result.provenance.parameters["rubric_source"] == "provided"
+    assert result.provenance.parameters["effective_max_concurrent"] == 1
+    assert result.provenance.declared_config["filter"]["min_score"] == 3.0
+    assert result.provenance.components["filter"]["min_score"] == 2.0
+    assert "must-not-be-serialized" not in result.to_evaluation_run().model_dump_json()
 
 
 @pytest.mark.asyncio

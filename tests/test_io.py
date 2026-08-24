@@ -9,14 +9,17 @@ import pytest
 from adarubric.core.models import (
     DynamicRubric,
     EvalDimension,
+    EvaluationRun,
     Trajectory,
     TrajectoryEvaluation,
     TrajectoryStep,
 )
 from adarubric.io.serialization import (
     export_dpo_dataset,
+    load_evaluation_run,
     load_evaluations,
     load_trajectories,
+    save_evaluation_run,
     save_evaluations,
     save_trajectories,
 )
@@ -90,6 +93,29 @@ class TestEvaluationIO:
         loaded = load_evaluations(path)
         assert len(loaded) == 2
         assert loaded[0].global_score == 3.5
+
+
+class TestEvaluationRunIO:
+    def test_roundtrip(
+        self,
+        tmp_dir,
+        sample_task,
+        sample_trajectory,
+        sample_rubric,
+        sample_evaluation,
+    ):
+        path = tmp_dir / "run.json"
+        run = EvaluationRun(
+            task=sample_task,
+            trajectories=[sample_trajectory],
+            rubric=sample_rubric,
+            evaluations=[sample_evaluation],
+            surviving_trajectory_ids=[sample_trajectory.trajectory_id],
+        )
+
+        save_evaluation_run(run, path)
+
+        assert load_evaluation_run(path) == run
 
 
 class TestDPOExport:
